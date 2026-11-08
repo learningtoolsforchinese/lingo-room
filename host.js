@@ -248,6 +248,7 @@ function cardEl(id) {
     if (!confirm(`Remove ${p?.name || "this student"} from the room?`)) return;
     update(roomRef, { [`players/${id}`]: null, [`answers/${id}`]: null, [`scores/${id}`]: null });
   };
+  el.onclick = (e) => { if (!e.target.closest(".kick")) openSpot(id, false); };
   // keep cards ordered by join time
   const mine = players.get(id)?.joinedAt || 0;
   const after = [...grid.querySelectorAll(".card")].find((c) => (players.get(c.id.slice(2))?.joinedAt || 0) > mine);
@@ -284,6 +285,7 @@ function renderCard(id, flash = false) {
   el.querySelector(".hist").classList.toggle("hidden", !hist.length);
 
   if (flash) { el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 180); }
+  if (id === spotId) renderSpot();
 }
 
 function renderBanner() {
@@ -312,9 +314,103 @@ function renderCount() {
 
 function renderAll() {
   for (const id of players.keys()) renderCard(id);
+  renderSpot();
   if (!players.size && !grid.querySelector(".empty")) grid.innerHTML = `<div class="empty">Waiting for students to join…</div>`;
   renderBanner(); renderLeaders(); renderCount(); renderJoinNames();
 }
+
+// ── Spotlight: one student's words, full screen ──────────────────────
+let spotId = null;         // student shown in the spotlight (null = closed)
+let spotFollow = true;     // jump to whoever spoke last
+let lastSpeaker = null;
+let spotEnteredFs = false;
+const spot = $("#spot");
+
+const orderedIds = () => [...players.entries()]
+  .sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0)).map(([id]) => id);
+
+function openSpot(id, follow) {
+  spotFollow = follow;
+  spotId = id || lastSpeaker || orderedIds()[0] || "";
+  spot.classList.remove("hidden");
+  if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().then(() => { spotEnteredFs = true; }).catch(() => {});
+  }
+  renderSpot();
+}
+function closeSpot() {
+  spotId = null;
+  spot.classList.add("hidden");
+  if (spotEnteredFs && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  spotEnteredFs = false;
+}
+function stepSpot(dir) {
+  const ids = orderedIds();
+  if (!ids.length) return;
+  spotFollow = false;
+  const i = ids.indexOf(spotId);
+  spotId = ids[(i + dir + ids.length) % ids.length];
+  renderSpot();
+}
+
+/** Biggest font size that fits the text in the middle of the screen, trying 1–8 lines. */
+function fitSize(text) {
+  // Chinese/Japanese characters are about 1em wide, Latin letters and spaces about 0.6em.
+  const units = [...text].reduce((n, c) => n + (/[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(c) ? 1 : 0.6), 0) || 1;
+  const W = window.innerWidth * 0.9, H = window.innerHeight * 0.55;
+  let best = 28;
+  for (let lines = 1; lines <= 8; lines++) {
+    const size = Math.min((W / Math.ceil(units / lines)) * 0.92, H / (lines * 1.18));
+    best = Math.max(best, size);
+  }
+  return Math.floor(best);
+}
+
+function renderSpot() {
+  if (spotId === null || spot.classList.contains("hidden")) return;
+  $("#spotFollow").checked = spotFollow;
+  const p = players.get(spotId);
+  const a = answers.get(spotId);
+  const target = meta.mode === "target" && meta.round > 0 && meta.target;
+  const current = a && (!target || a.round === meta.round);
+  const award = target ? awards[spotId] : null;
+  const text = current ? a.text || "" : "";
+
+  $("#spotName").textContent = p ? p.name : (players.size ? "—" : "Waiting for students…");
+  $("#spotTarget").innerHTML = target ? `Say: <b>${escapeHtml(meta.target)}</b>` : "";
+  spot.classList.toggle("offline", p?.online === false);
+  spot.classList.toggle("speaking", !!(current && !a.final && text));
+  spot.classList.toggle("correct", !!award);
+  spot.classList.toggle("wrong", !!(target && !award && current && a.final && text));
+
+  const tEl = $("#spotText");
+  const shown = text || "…";
+  tEl.textContent = shown;
+  tEl.style.fontSize = (text ? fitSize(text) : fitSize("……")) + "px";
+  tEl.classList.toggle("interim", !!(current && !a.final));
+  tEl.classList.toggle("waiting", !text);
+  $("#spotPy").textContent = boardPinyin && text ? toPinyin(text) : "";
+  $("#spotBadge").textContent = award ? `${award.order === 1 ? "🥇 " : "✅ "}+${award.points}` : "";
+}
+
+$("#spotBtn").onclick = () => openSpot(null, true);
+$("#spotClose").onclick = closeSpot;
+$("#spotPrev").onclick = () => stepSpot(-1);
+$("#spotNext").onclick = () => stepSpot(1);
+$("#spotFollow").onchange = (e) => {
+  spotFollow = e.target.checked;
+  if (spotFollow && lastSpeaker) spotId = lastSpeaker;
+  renderSpot();
+};
+document.addEventListener("keydown", (e) => {
+  if (spotId === null) return;
+  if (e.target instanceof Element && e.target.closest("input, textarea, select, dialog")) return;
+  if (e.key === "Escape") closeSpot();
+  else if (e.key === "ArrowRight") stepSpot(1);
+  else if (e.key === "ArrowLeft") stepSpot(-1);
+  else if (e.key.toLowerCase() === "f") { $("#spotFollow").click(); }
+});
+window.addEventListener("resize", renderSpot);
 
 // ── Live listeners ───────────────────────────────────────────────────
 onValue(r("meta"), (s) => {
@@ -337,6 +433,8 @@ onChildChanged(r("players"), onPlayer);
 onChildRemoved(r("players"), (s) => {
   players.delete(s.key); answers.delete(s.key); history.delete(s.key);
   document.getElementById("c-" + s.key)?.remove();
+  if (lastSpeaker === s.key) lastSpeaker = null;
+  if (spotId === s.key) { spotId = orderedIds()[0] ?? ""; renderSpot(); }
   renderAll();
 });
 
@@ -350,6 +448,10 @@ const onAnswer = (s) => {
     history.set(s.key, h.slice(0, 4));
   }
   maybeAward(s.key, a);
+  if (a?.text) {
+    lastSpeaker = s.key;
+    if (spotId !== null && spotFollow) spotId = s.key;
+  }
   renderCard(s.key, true);
   renderBanner();
 };

@@ -43,7 +43,8 @@
     <div class="ctl-group">
       <button class="btn" id="clearBoard">Clear board</button>
       <button class="btn" id="resetScores">Reset scores</button>
-      <button class="btn" id="fullscreen">⛶</button>
+      <button class="btn gold" id="spotBtn" title="Show what students say in full screen (or click a student's card)">🔍 Spotlight</button>
+      <button class="btn" id="fullscreen" title="Full-screen page">⛶</button>
       <button class="btn" id="endRoom">End class</button>
     </div>
   </section>
@@ -88,6 +89,24 @@
       </button>
       <div class="err" id="signInErr" style="margin-top:12px"></div>
       <p class="note" style="margin-top:18px"><a href="./" id="studentLink" style="color:var(--muted)">I'm a student →</a></p>
+    </div>
+  </div>
+
+  <div class="spot hidden" id="spot">
+    <div class="spot-top">
+      <div class="spot-name"><span class="dot"></span><span id="spotName"></span></div>
+      <div class="spot-target hanzi" id="spotTarget"></div>
+      <div class="spot-ctl">
+        <label class="toggle" title="Jump to whoever spoke last (key: F)"><input type="checkbox" id="spotFollow"> Follow latest speaker</label>
+        <button class="btn" id="spotPrev" title="Previous student (←)">◀</button>
+        <button class="btn" id="spotNext" title="Next student (→)">▶</button>
+        <button class="btn" id="spotClose" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="spot-body">
+      <div class="spot-text hanzi" id="spotText"></div>
+      <div class="spot-py" id="spotPy"></div>
+      <div class="spot-badge" id="spotBadge"></div>
     </div>
   </div>
 

@@ -16,6 +16,8 @@ Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase 
 | 🗣 **Free talk** | Students say anything. Each card shows their latest sentence and the last few before it. |
 | 🎯 **Say the word** | The teacher sets a word (or uses **Next ▶** with a word list). Students who say it correctly get points: 1000 for the first, then 900, 800 … down to a minimum of 500. |
 
+**🔍 Spotlight** shows one student's words in giant text that fills the projector screen, with pinyin, updating live as they speak. Click **🔍 Spotlight** to follow whoever spoke last, or click any student's card to show just that student. Keys: **← →** switch student, **F** turns follow on or off, **Esc** closes.
+
 Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept same sound** (counts 他/她 or 妈/媽 as correct when the syllables and tones match), Simplified (zh-CN) or Traditional (zh-TW), clear board, reset scores, full screen, end class.
 
 ---
