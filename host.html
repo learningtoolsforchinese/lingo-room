@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speak Room · Teacher</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+</head>
+<body>
+  <header class="host-top">
+    <div class="brand">说吧 <span>Speak Room</span></div>
+    <span class="count-pill"><span id="count">0</span> students</span>
+    <div class="join-mini" id="showJoin" title="Show join screen">
+      <span class="muted">PIN</span><span class="pin" id="pinMini">······</span>
+    </div>
+  </header>
+
+  <section class="host-controls">
+    <div class="seg" id="modeSeg">
+      <button data-mode="free" class="on">🗣 Free talk</button>
+      <button data-mode="target">🎯 Say the word</button>
+    </div>
+
+    <div class="ctl-group" id="targetCtl">
+      <input id="targetInput" class="target-input hanzi" placeholder="e.g. 你好" maxlength="30">
+      <button class="btn primary" id="startRound">Start round</button>
+      <button class="btn" id="nextWord" title="Start a round with the next word from your list">Next ▶</button>
+      <button class="btn ghost" id="editList">Word list</button>
+    </div>
+
+    <div class="grow"></div>
+
+    <div class="ctl-group">
+      <label class="toggle"><input type="checkbox" id="openMic" checked> Mics on</label>
+      <label class="toggle"><input type="checkbox" id="showPy" checked> Pinyin on board</label>
+      <label class="toggle"><input type="checkbox" id="stuPy" checked> Pinyin for students</label>
+      <label class="toggle" title="Count 他/她 or 妈/媽 as correct when the sound and tones match"><input type="checkbox" id="acceptSound" checked> Accept same sound</label>
+      <select id="lang"></select>
+    </div>
+
+    <div class="ctl-group">
+      <button class="btn" id="clearBoard">Clear board</button>
+      <button class="btn" id="resetScores">Reset scores</button>
+      <button class="btn" id="fullscreen">⛶</button>
+      <button class="btn" id="endRoom">End class</button>
+    </div>
+  </section>
+
+  <main class="host-main">
+    <div class="target-banner hidden" id="banner">
+      <div>
+        <div class="word hanzi" id="bWord"></div>
+        <div class="py" id="bPy"></div>
+      </div>
+      <div class="meta">
+        Round <span id="bRound">1</span><br>
+        <span class="big"><span id="bDone">0</span>/<span id="bTotal">0</span></span> correct
+      </div>
+    </div>
+    <div class="grid" id="grid"><div class="empty">Waiting for students to join…</div></div>
+    <aside class="board-panel">
+      <h3>🏆 Leaderboard</h3>
+      <ol id="leaders"><li class="muted">No points yet</li></ol>
+    </aside>
+  </main>
+
+  <div class="join-overlay" id="joinOverlay">
+    <div class="join-card">
+      <div class="muted">Go to</div>
+      <div class="url" id="joinUrl">…</div>
+      <div class="muted" style="margin-top:10px">and enter PIN</div>
+      <div class="bigpin" id="pinBig">······</div>
+      <div class="qr" id="qr"></div>
+      <div class="names" id="joinNames"></div>
+      <button class="btn primary" id="hideJoin" style="font-size:20px;padding:12px 30px">Start ▶</button>
+    </div>
+  </div>
+
+  <dialog id="listDlg">
+    <h3 style="margin-top:0">Word list</h3>
+    <p class="muted" style="margin-top:0">One word or sentence per line. “Next ▶” goes through them in order.</p>
+    <textarea id="listText" class="hanzi" placeholder="你好&#10;谢谢&#10;再见&#10;我是学生"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn" id="listCancel">Cancel</button>
+      <button class="btn primary" id="listSave">Save</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="host.js"></script>
+</body>
+</html>

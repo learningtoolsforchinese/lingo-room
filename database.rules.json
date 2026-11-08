@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$pin": {
+        ".read": "auth != null && data.child('hostUid').val() === auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid && $pin.matches(/^[0-9]{6}$/)) || data.child('hostUid').val() === auth.uid)",
+
+        "meta": {
+          ".read": "auth != null"
+        },
+
+        "players": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($pin).child('meta').exists()",
+            ".validate": "newData.hasChildren(['name'])",
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+            "joinedAt": { ".validate": "newData.isNumber()" },
+            "online": { ".validate": "newData.isBoolean()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "answers": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($pin).child('players').child($uid).exists()",
+            ".validate": "newData.hasChildren(['text', 'final', 'round'])",
+            "text": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "final": { ".validate": "newData.isBoolean()" },
+            "round": { ".validate": "newData.isNumber()" },
+            "at": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "scores": {
+          "$uid": { ".read": "auth != null && auth.uid === $uid" }
+        },
+
+        "rounds": {
+          "$round": {
+            "$uid": { ".read": "auth != null && auth.uid === $uid" }
+          }
+        }
+      }
+    }
+  }
+}

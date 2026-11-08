@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1023">
+  <title>Speak Room · 说吧</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="stu">
+    <!-- 1. PIN -->
+    <section id="sPin" class="stu-center hidden">
+      <div style="text-align:center">
+        <h1>说吧 <span style="color:var(--gold)">Speak Room</span></h1>
+        <div class="muted">Enter the PIN on your teacher's screen</div>
+      </div>
+      <form class="stu-card" id="pinForm" style="display:grid;gap:12px">
+        <input id="pinInput" class="field pin" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="PIN" required>
+        <button class="btn primary wide">Next</button>
+        <div class="err" id="pinErr"></div>
+      </form>
+      <div class="note"><a href="host.html" id="hostLink" style="color:var(--muted)">I'm the teacher →</a></div>
+    </section>
+
+    <!-- 2. Name -->
+    <section id="sName" class="stu-center hidden">
+      <div style="text-align:center">
+        <h1>What's your name?</h1>
+        <div class="muted">Room <b id="nameRoom"></b></div>
+      </div>
+      <form class="stu-card" id="nameForm" style="display:grid;gap:12px">
+        <input id="nameInput" class="field hanzi" autocomplete="off" maxlength="20" placeholder="Your name / 名字" required>
+        <button class="btn primary wide">Join 加入</button>
+        <div class="err" id="nameErr"></div>
+      </form>
+    </section>
+
+    <!-- 3. Play -->
+    <section id="sPlay" class="hidden" style="display:flex;flex-direction:column;flex:1;gap:14px">
+      <div class="stu-head">
+        <div><b id="meName"></b> <span class="muted">· <span id="meRoom"></span></span></div>
+        <span class="score-pill">⭐ <span id="meScore">0</span></span>
+      </div>
+
+      <div class="stu-target hidden" id="tBox">
+        <div class="lbl">Say this · 请说</div>
+        <div class="word hanzi" id="tWord"></div>
+        <div class="py" id="tPy"></div>
+      </div>
+      <div class="stu-card" id="freeBox" style="text-align:center">
+        <b>🗣 Free talk</b> <span class="muted">— say anything in Chinese!</span>
+      </div>
+
+      <div class="heard">
+        <div class="text hanzi" id="heardText"></div>
+        <div class="py" id="heardPy"></div>
+      </div>
+      <div class="feedback" id="feedback"></div>
+
+      <div class="mic-wrap">
+        <button class="mic" id="mic" aria-label="Tap to speak">🎤</button>
+        <div class="note" id="micNote">Tap to speak</div>
+      </div>
+
+      <div style="margin-top:auto">
+        <div class="note"><a href="#" id="typeToggle" style="color:var(--muted)">Can't use the mic? Type instead</a></div>
+        <form class="type-row hidden" id="typeForm">
+          <input id="typeInput" class="hanzi" maxlength="200" autocomplete="off" placeholder="输入中文…">
+          <button class="btn primary">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 4. Ended / removed -->
+    <section id="sEnd" class="stu-center hidden" style="text-align:center">
+      <h1 id="endTitle">Class ended 再见！</h1>
+      <p class="muted" id="endMsg">Thanks for joining.</p>
+      <button class="btn primary wide" id="endBtn">Join another room</button>
+    </section>
+  </div>
+
+  <script type="module" src="student.js"></script>
+</body>
+</html>
