@@ -2,10 +2,18 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "teachers": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
+        ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
+        "room": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6}$/)" },
+        "$other": { ".validate": false }
+      }
+    },
     "rooms": {
       "$pin": {
         ".read": "auth != null && data.child('hostUid').val() === auth.uid",
-        ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid && $pin.matches(/^[0-9]{6}$/)) || data.child('hostUid').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && auth.token.firebase.sign_in_provider === 'google.com' && newData.child('hostUid').val() === auth.uid && $pin.matches(/^[0-9]{6}$/)) || data.child('hostUid').val() === auth.uid)",
 
         "meta": {
           ".read": "auth != null"

@@ -67,6 +67,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--gold); }
 .brand span { color: var(--gold); }
 .join-mini { display: flex; align-items: center; gap: 10px; margin-left: auto; cursor: pointer; }
 .join-mini .pin { font-size: 26px; font-weight: 800; letter-spacing: 4px; color: var(--gold); }
+.me { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.me img { width: 30px; height: 30px; border-radius: 50%; }
+.me .btn { padding: 6px 10px; font-size: 13px; }
+.join-overlay.signin { z-index: 60; background: var(--bg); }
+.google-btn {
+  display: inline-flex; align-items: center; gap: 12px; background: #fff; color: #1f1f1f; border: 1px solid #dadce0;
+  border-radius: 99px; padding: 12px 24px; font-weight: 600; font-size: 16px;
+}
+.google-btn:hover { background: #f4f4f4; }
+.google-btn:disabled { opacity: .6; }
 .count-pill { background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 99px; font-weight: 700; }
 
 .host-controls {

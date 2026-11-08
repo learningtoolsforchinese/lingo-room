@@ -2,7 +2,7 @@ import {
   ref, get, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved,
   serverTimestamp, increment,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { boot, withEmu, escapeHtml, toPinyin, isMatch, LANGS, $ } from "./common.js";
+import { bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, isMatch, LANGS, $ } from "./common.js";
 
 const LS = { pin: "lingoroom.hostPin", list: "lingoroom.wordList", idx: "lingoroom.wordIdx", py: "lingoroom.boardPinyin" };
 const ls = {
@@ -11,7 +11,46 @@ const ls = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 
-const { db, uid } = await boot();
+// ── Teacher sign-in (Google) ─────────────────────────────────────────
+const { auth, db } = await bootTeacher();
+
+function waitForSignIn() {
+  return new Promise((resolve) => {
+    $("#signIn").classList.remove("hidden");
+    $("#studentLink").href = withEmu("./");
+    $("#googleBtn").onclick = async () => {
+      $("#signInErr").textContent = "";
+      $("#googleBtn").disabled = true;
+      try {
+        const user = await signInTeacher(auth);
+        if (user) { $("#signIn").classList.add("hidden"); resolve(user); }
+      } catch (e) {
+        console.error(e);
+        $("#signInErr").textContent = e.code === "auth/popup-closed-by-user"
+          ? "Sign-in was cancelled."
+          : e.code === "auth/unauthorized-domain"
+            ? "This website isn't allowed yet. Add it in Firebase → Authentication → Settings → Authorized domains."
+            : "Could not sign in. Please try again.";
+      } finally { $("#googleBtn").disabled = false; }
+    };
+  });
+}
+
+const user = isTeacher(auth.currentUser) ? auth.currentUser : await waitForSignIn();
+const uid = user.uid;
+{
+  const meEl = $("#me");
+  meEl.classList.remove("hidden");
+  meEl.querySelector("span").textContent = user.displayName || user.email || "Teacher";
+  meEl.title = user.email || "";
+  const img = meEl.querySelector("img");
+  if (user.photoURL) img.src = user.photoURL; else img.remove();
+  meEl.querySelector("button").onclick = async () => {
+    if (!confirm("Sign out? The room stays open. Sign in again to get back to it.")) return;
+    await signOutTeacher(auth);
+    location.reload();
+  };
+}
 
 // ── Room: resume the teacher's last room, or create a new one ──────────
 function defaultMeta() {
@@ -22,7 +61,8 @@ function defaultMeta() {
 }
 
 async function resumeOrCreate() {
-  const saved = ls.get(LS.pin);
+  // The teacher's current room is saved on their account, so it also comes back on another computer.
+  const saved = (await get(ref(db, `teachers/${uid}/room`)).catch(() => null))?.val() || ls.get(LS.pin);
   if (saved) {
     try {
       const s = await get(ref(db, `rooms/${saved}/hostUid`));
@@ -34,6 +74,7 @@ async function resumeOrCreate() {
     if ((await get(ref(db, `rooms/${p}/meta`))).exists()) continue;
     try {
       await set(ref(db, `rooms/${p}`), { hostUid: uid, meta: defaultMeta() });
+      await set(ref(db, `teachers/${uid}/room`), p).catch((e) => console.warn(e));
       ls.set(LS.pin, p);
       return p;
     } catch (e) { console.warn("PIN taken, retrying", e); }
@@ -145,6 +186,7 @@ $("#fullscreen").onclick = () => {
 $("#endRoom").onclick = async () => {
   if (!confirm("End this class? The room and all answers will be deleted.")) return;
   await remove(roomRef);
+  await remove(ref(db, `teachers/${uid}/room`)).catch(() => {});
   ls.del(LS.pin);
   document.body.innerHTML = `
     <div class="stu"><div class="stu-center" style="text-align:center">

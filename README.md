@@ -4,7 +4,7 @@ A free, Kahoot-style live classroom app for language lessons. Students join with
 
 The first version is built for **Chinese speaking practice** (speech recognition plus pinyin). It's designed to grow into other activities, such as writing, and other languages, such as English and French.
 
-- **Teacher page:** `host.html`. Shows the PIN, a QR code, a live card for each student and a leaderboard.
+- **Teacher page:** `host.html`. The teacher signs in with their Google (Gmail) account, then sees the PIN, a QR code, a live card for each student and a leaderboard.
 - **Student page:** `index.html`. Enter the PIN and a name, then tap 🎤 to speak (or type).
 
 Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase Realtime Database** (free Spark plan) syncs the data live. Speech recognition is the browser's built-in Web Speech API, which is also free.
@@ -24,7 +24,9 @@ Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept
 
 ### 1. Create the Firebase project
 1. Go to <https://console.firebase.google.com> and click **Create a project**. Name it something like `lingo-room`. You can turn off Google Analytics.
-2. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save.**
+2. **Build → Authentication → Get started → Sign-in method**, then turn on two providers:
+   - **Google → Enable**, pick your email as the support email, **Save**. Teachers sign in with this.
+   - **Anonymous → Enable → Save.** Students join with this, without an account.
 3. **Build → Realtime Database → Create database.** Pick a location near you (e.g. Singapore `asia-southeast1`) and choose **Start in locked mode**.
 4. In the Realtime Database, open the **Rules** tab, delete what's there, paste the whole contents of [`database.rules.json`](database.rules.json), and click **Publish**.
 5. Click **Project settings (⚙) → General → Your apps → `</>` (Web)**. Give it a name and click **Register app**. You don't need Firebase Hosting.
@@ -54,12 +56,14 @@ Without this step, students get an error when they join.
 
 ## In class
 
-1. Open `host.html` on the projector. The room is created automatically and the PIN and QR code appear.
+1. Open `host.html` on the projector and **sign in with Google**. The room is created automatically and the PIN and QR code appear.
 2. Students scan the QR code or open the site and type the PIN, then enter their name.
 3. Click **Start ▶**, then choose **Free talk** or **Say the word**.
 4. Click **End class** at the end. This deletes the room and its data.
 
-If the teacher refreshes the page, the same room comes back. Students who refresh rejoin automatically.
+If the teacher refreshes the page, or signs in on a different computer with the same Google account, the same room comes back. Students who refresh rejoin automatically.
+
+> **Who can be a teacher?** Anyone with a Google account can sign in and open a room. Students can never create rooms or change one. If you want only specific teachers (e.g. your school's accounts), that can be added later.
 
 ### Tips for students' phones
 - Use **Chrome** (Android, laptop) or **Safari** (iPhone/iPad). Firefox and some in-app browsers (LINE, Facebook, Telegram) **don't support voice**. The page then shows a box for typing instead.
@@ -83,7 +87,7 @@ npx firebase-tools@13 emulators:start --only auth,database --project demo-lingor
 ```bash
 python3 -m http.server 8080
 ```
-Then open `http://localhost:8080/host.html?emu=1` and, in other tabs, `http://localhost:8080/?emu=1`. In emulator mode each tab is a separate student.
+Then open `http://localhost:8080/host.html?emu=1` (the emulator shows a test Google account picker) and, in other tabs, `http://localhost:8080/?emu=1`. In emulator mode each tab is a separate student.
 
 ## Files
 | File | Purpose |
