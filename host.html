@@ -20,17 +20,24 @@
 
   <section class="host-controls">
     <div class="ctl-group">
-      <input id="promptInput" class="prompt-input hanzi" placeholder="Word to say (optional)" maxlength="40">
+      <input id="promptInput" class="prompt-input hanzi" placeholder="Word or question (optional)" maxlength="40">
       <button class="btn primary" id="showPrompt" title="Show this word on students' phones">Show</button>
       <button class="btn" id="nextWord" title="Show the next word from your list">Next ▶</button>
       <button class="btn ghost" id="editList">Word list</button>
       <button class="btn ghost" id="clearPrompt" title="Hide the word">✕</button>
     </div>
 
+    <div class="chips" id="inputChips" title="How students can answer (choose one or more)">
+      <span class="lbl">Answer by</span>
+      <button class="chip" data-k="speak">🎤 Speak</button>
+      <button class="chip" data-k="type">⌨️ Type</button>
+      <button class="chip" data-k="write">✍️ Write</button>
+    </div>
+
     <div class="grow"></div>
 
     <div class="ctl-group">
-      <label class="toggle"><input type="checkbox" id="openMic" checked> Mics on</label>
+      <label class="toggle" title="Let students send answers"><input type="checkbox" id="openMic" checked> Answers on</label>
       <label class="toggle"><input type="checkbox" id="showPy" checked> Pinyin on board</label>
       <label class="toggle"><input type="checkbox" id="stuPy" checked> Pinyin for students</label>
       <select id="lang"></select>
@@ -48,7 +55,7 @@
   <main class="host-main">
     <div class="prompt-banner hidden" id="banner">
       <div>
-        <div class="lbl">Say this</div>
+        <div class="lbl" id="bLbl">Answer this</div>
         <div class="word hanzi" id="bWord"></div>
         <div class="py" id="bPy"></div>
       </div>
@@ -100,6 +107,7 @@
     </div>
 
     <div class="spot-body only-student">
+      <div class="spot-ink" id="spotInk"></div>
       <div class="spot-text hanzi" id="spotText"></div>
       <div class="spot-py" id="spotPy"></div>
       <div class="spot-marks hidden" id="spotMarks">

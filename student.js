@@ -1,7 +1,8 @@
 import {
   ref, get, set, push, remove, onValue, onDisconnect, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { boot, withEmu, toPinyin, escapeHtml, $ } from "./common.js";
+import { boot, withEmu, toPinyin, escapeHtml, $, parseInk, inkSvg, inputsOf } from "./common.js";
+import { createBoard, recognize, encodeStrokes } from "./board.js";
 
 const POINTS = 1000;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -73,9 +74,8 @@ function enterRoom(name) {
   joined = true; ended = false; marksLoaded = false; lastScore = null;
   show("sPlay");
   if (!SR) {
-    $("#micNote").textContent = "Voice isn't supported in this browser. Open this page in Chrome or Safari — or type below.";
+    $("#micNote").textContent = "Voice isn't supported in this browser. Open this page in Chrome or Safari.";
     $("#mic").disabled = true;
-    $("#typeForm").classList.remove("hidden");
   }
 
   // Presence: mark offline when the phone disconnects, online when it reconnects.
@@ -109,7 +109,7 @@ function enterRoom(name) {
 
   unsubs.push(onValue(rr(`said/${uid}`), (s) => {
     const v = s.val() || {};
-    myWords = Object.keys(v).sort().reverse().map((id) => ({ id, text: v[id].text }));
+    myWords = Object.keys(v).sort().reverse().map((id) => ({ id, text: v[id].text, ink: parseInk(v[id].ink) }));
     renderMine();
   }));
 
@@ -145,8 +145,39 @@ function finish(title, msg, canRejoin = false) {
   show("sEnd");
 }
 
+// ── Answer modes chosen by the teacher: speak / type / write ─────────
+let mode = null;
+function availableModes() {
+  const on = inputsOf(meta);
+  // No voice in this browser and speaking is the only option → let them type instead.
+  if (!SR && on.length === 1 && on[0] === "speak") return ["speak", "type"];
+  return on;
+}
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("#modeTabs button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
+  $("#paneSpeak").classList.toggle("hidden", m !== "speak");
+  $("#paneType").classList.toggle("hidden", m !== "type");
+  $("#paneWrite").classList.toggle("hidden", m !== "write");
+  if (m !== "speak" && listening) { try { rec.stop(); } catch {} }
+  if (m === "write") ensureBoard();
+  setFeedback("");
+}
+$("#modeTabs").onclick = (e) => { const m = e.target.closest("button")?.dataset.mode; if (m) setMode(m); };
+
+function renderModes() {
+  const modes = availableModes();
+  document.querySelectorAll("#modeTabs button").forEach((b) => b.classList.toggle("hidden", !modes.includes(b.dataset.mode)));
+  $("#modeTabs").classList.toggle("hidden", modes.length < 2);
+  if (!modes.includes(mode)) setMode(modes[0]);
+  $(".stu-prompt .lbl").textContent = modes.length === 1
+    ? { speak: "Say this · 请说", type: "Type this · 请打字", write: "Write this · 请写" }[modes[0]]
+    : "Answer this · 请回答";
+}
+
 function renderMeta() {
   const prompt = meta.prompt || "";
+  renderModes();
   $("#pBox").classList.toggle("hidden", !prompt);
   $("#hintBox").classList.toggle("hidden", !!prompt);
   $("#pWord").textContent = prompt;
@@ -157,6 +188,7 @@ function renderMeta() {
     if (!listening) $("#micNote").textContent = meta.open ? "Tap to speak" : "⏸ Teacher paused the mics";
   }
   $("#typeInput").disabled = !meta.open;
+  $("#wSend").disabled = !meta.open;
 }
 
 function renderMine() {
@@ -166,7 +198,7 @@ function renderMine() {
     ? myWords.map((w) => {
         const st = myMarks[w.id];
         return `<li class="${st === true ? "ok" : st === false ? "no" : ""}">
-          <span class="t">${escapeHtml(w.text)}</span>
+          ${w.ink.length ? `<span class="inks">${inkSvg(w.ink, 30)}</span>` : ""}<span class="t">${escapeHtml(w.text)}</span>
           <span class="m">${st === true ? `✓ +${POINTS}` : st === false ? "✗ Try again" : ""}</span></li>`;
       }).join("")
     : `<li class="none">Your words will appear here</li>`;
@@ -229,14 +261,17 @@ function sendInterim(text) {
   const wait = Math.max(0, 250 - (Date.now() - lastSend));
   timer = setTimeout(() => { timer = null; lastSend = Date.now(); writeLive(queued); }, wait);
 }
-function submitFinal(text) {
+function submitWord(text, via, ink = null) {
   clearTimeout(timer); timer = null;
   text = text.trim().slice(0, 200);
-  if (!text || !joined || !meta?.open) return;
-  push(rr(`said/${uid}`), { text, at: serverTimestamp() }).catch((e) => console.warn("not saved", e));
+  if (!text || !joined || !meta?.open) return false;
+  const word = { text, at: serverTimestamp(), via };
+  if (ink) word.ink = ink;
+  push(rr(`said/${uid}`), word).catch((e) => { console.warn("not saved", e); setFeedback("Couldn't send — try again", "no"); });
   remove(rr(`answers/${uid}`)).catch(() => {});
-  showHeard(text, false);
+  if (via === "speak") showHeard(text, false);
   setFeedback("Sent to your teacher ✓");
+  return true;
 }
 
 // ── Speech recognition ───────────────────────────────────────────────
@@ -281,7 +316,7 @@ function startListening() {
   };
   rec.onend = () => {
     setListening(false);
-    if (transcript.trim()) submitFinal(transcript);
+    if (transcript.trim()) submitWord(transcript, "speak");
     else remove(rr(`answers/${uid}`)).catch(() => {});
   };
   try { rec.start(); } catch (err) { console.warn(err); setListening(false); }
@@ -292,14 +327,79 @@ $("#mic").onclick = () => {
   else startListening();
 };
 
-// ── Typing fallback ──────────────────────────────────────────────────
-$("#typeToggle").onclick = (e) => { e.preventDefault(); $("#typeForm").classList.toggle("hidden"); $("#typeInput").focus(); };
-$("#typeForm").onsubmit = (e) => {
+// ── Typing ───────────────────────────────────────────────────────────
+$("#paneType").onsubmit = (e) => {
   e.preventDefault();
-  const t = $("#typeInput").value;
-  $("#typeInput").value = "";
-  submitFinal(t);
+  if (submitWord($("#typeInput").value, "type")) $("#typeInput").value = "";
 };
+$("#typeInput").oninput = (e) => {
+  if (e.target.value.trim()) sendInterim(e.target.value);
+  else { clearTimeout(timer); timer = null; remove(rr(`answers/${uid}`)).catch(() => {}); }
+};
+
+// ── Handwriting board ────────────────────────────────────────────────
+// The student draws one character, taps the right suggestion, and it's added
+// to their answer together with their strokes (so the teacher sees the real handwriting).
+let board = null;
+let written = [];            // [{ t: "好", s: [[x, y, …], …] }]
+let recogSeq = 0;
+let recogTimer = null;
+
+function ensureBoard() {
+  if (board) { board.resize(); return; }
+  board = createBoard($("#wCanvas"), () => {
+    clearTimeout(recogTimer);
+    if (!board.strokes.length) { renderCands(null); return; }
+    recogTimer = setTimeout(runRecognition, 350);
+  });
+  renderCands(null);
+}
+
+async function runRecognition() {
+  const seq = ++recogSeq;
+  const strokes = board.strokes.slice();
+  try {
+    const list = await recognize(strokes, board.width, board.height, meta?.lang || "zh-CN");
+    if (seq === recogSeq) renderCands(list);
+  } catch (e) {
+    console.warn(e);
+    if (seq === recogSeq) renderCands([], true);
+  }
+}
+
+function renderCands(list, failed = false) {
+  const el = $("#wCands");
+  if (list === null) { el.innerHTML = `<span class="muted">Draw one character in the box 👇</span>`; return; }
+  const keep = `<button class="keep" data-keep="1" title="Send your drawing as it is">✍️ Keep my drawing</button>`;
+  el.innerHTML = (failed ? `<span class="muted">Can't recognise right now.</span>` : "")
+    + list.map((c) => `<button data-c="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("") + keep;
+}
+
+$("#wCands").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b || !board?.strokes.length) return;
+  const t = b.dataset.keep ? "✍" : b.dataset.c;
+  written.push({ t, s: encodeStrokes(board.strokes, board.width, board.height) });
+  board.clear();
+  renderWritten();
+};
+$("#wUndo").onclick = () => board?.undo();
+$("#wClear").onclick = () => board?.clear();
+$("#wBack").onclick = () => { written.pop(); renderWritten(); };
+$("#wSend").onclick = () => {
+  if (board?.strokes.length) { setFeedback("Tap a character above the box first 👆", "no"); return; }
+  if (!written.length) { setFeedback("Write a character first ✍️", "no"); return; }
+  const ink = JSON.stringify(written);
+  if (ink.length > 30000) { setFeedback("That's too long — send fewer characters at a time.", "no"); return; }
+  if (submitWord(written.map((w) => w.t).join(""), "write", ink)) { written = []; renderWritten(true); }
+};
+
+function renderWritten(sent = false) {
+  const text = written.map((w) => w.t).join("");
+  $("#wText").innerHTML = text ? escapeHtml(text) : `<span class="muted">Write a character below ✍️</span>`;
+  if (text) sendInterim(text);
+  else if (!sent) remove(rr(`answers/${uid}`)).catch(() => {});
+}
 
 // Auto-continue: ?pin=123456 in the link (from the QR code) → go straight to the name step.
 if (/^\d{6}$/.test(pin)) choosePin(pin);

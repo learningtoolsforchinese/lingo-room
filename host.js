@@ -2,7 +2,10 @@ import {
   ref, get, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved,
   serverTimestamp, increment,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, LANGS, $ } from "./common.js";
+import {
+  bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, LANGS, $,
+  parseInk, inkSvg, inputsOf,
+} from "./common.js";
 
 const POINTS = 1000; // points for each word the teacher marks correct
 
@@ -56,7 +59,10 @@ const uid = user.uid;
 
 // ── Room: resume the teacher's last room, or create a new one ──────────
 function defaultMeta() {
-  return { lang: "zh-CN", prompt: "", promptPinyin: "", open: true, showPinyin: true, createdAt: serverTimestamp() };
+  return {
+    lang: "zh-CN", prompt: "", promptPinyin: "", open: true, showPinyin: true,
+    inputs: { speak: true, type: false, write: false }, createdAt: serverTimestamp(),
+  };
 }
 
 async function resumeOrCreate() {
@@ -152,6 +158,13 @@ $("#listCancel").onclick = () => $("#listDlg").close();
 $("#listSave").onclick = () => { ls.set(LS.list, $("#listText").value); ls.set(LS.idx, "0"); $("#listDlg").close(); };
 
 $("#openMic").onchange = (e) => saveMeta({ open: e.target.checked });
+$("#inputChips").onclick = (e) => {
+  const k = e.target.closest(".chip")?.dataset.k;
+  if (!k) return;
+  const on = new Set(inputsOf(meta));
+  if (on.has(k)) { if (on.size === 1) return; on.delete(k); } else on.add(k);   // keep at least one
+  saveMeta({ inputs: { speak: on.has("speak"), type: on.has("type"), write: on.has("write") } });
+};
 $("#stuPy").onchange = (e) => saveMeta({ showPinyin: e.target.checked });
 langSel.onchange = (e) => saveMeta({ lang: e.target.value });
 $("#showPy").onchange = (e) => { boardPinyin = e.target.checked; ls.set(LS.py, boardPinyin ? "1" : "0"); renderAll(); };
@@ -187,6 +200,8 @@ $("#endRoom").onclick = async () => {
 
 function renderControls() {
   $("#openMic").checked = !!meta.open;
+  const on = inputsOf(meta);
+  document.querySelectorAll("#inputChips .chip").forEach((c) => c.classList.toggle("on", on.includes(c.dataset.k)));
   $("#stuPy").checked = !!meta.showPinyin;
   $("#showPy").checked = boardPinyin;
   langSel.value = meta.lang || "zh-CN";
@@ -270,7 +285,7 @@ function renderCard(id, flash = false) {
   html += items.map((it) => {
     const st = m[it.id];
     return `<li class="item ${st === true ? "ok" : st === false ? "no" : ""}" data-uid="${escapeHtml(id)}" data-id="${escapeHtml(it.id)}">
-      <div class="it-main"><div class="it-text hanzi">${escapeHtml(it.text)}</div>${pyHtml(it.text)}</div>
+      <div class="it-main">${it.ink.length ? `<div class="it-ink">${inkSvg(it.ink, 52)}</div>` : ""}<div class="it-text hanzi">${escapeHtml(it.text)}</div>${pyHtml(it.text)}</div>
       <div class="it-btns"><button class="mk ok" data-v="1" title="Correct (+${POINTS})">✓</button><button class="mk no" data-v="0" title="Incorrect">✗</button></div>
     </li>`;
   }).join("");
@@ -281,6 +296,8 @@ function renderCard(id, flash = false) {
 }
 
 function renderBanner() {
+  const on = inputsOf(meta);
+  $("#bLbl").textContent = on.length === 1 ? { speak: "Say this", type: "Type this", write: "Write this" }[on[0]] : "Answer this";
   $("#banner").classList.toggle("hidden", !meta.prompt);
   $("#bWord").textContent = meta.prompt || "";
   $("#bPy").textContent = boardPinyin && meta.prompt ? meta.promptPinyin || toPinyin(meta.prompt) : "";
@@ -383,14 +400,18 @@ function renderSpot() {
 
   $("#spotName").textContent = p ? p.name : (players.size ? "—" : "Waiting for students…");
   $("#spotScore").textContent = p && scores[spotId] ? `⭐ ${scores[spotId]}` : "";
-  $("#spotPrompt").innerHTML = meta.prompt ? `Say: <b>${escapeHtml(meta.prompt)}</b>` : "";
+  $("#spotPrompt").innerHTML = meta.prompt ? `Task: <b>${escapeHtml(meta.prompt)}</b>` : "";
   spot.classList.toggle("offline", p?.online === false);
   spot.classList.toggle("correct", st === true);
   spot.classList.toggle("wrong", st === false);
 
+  const ink = !liveText && latest?.ink?.length ? latest.ink : [];
+  const inkPx = ink.length ? Math.floor(Math.min(window.innerHeight * 0.42, (window.innerWidth * 0.86) / ink.length - 20)) : 0;
+  $("#spotInk").innerHTML = ink.length ? inkSvg(ink, inkPx) : "";
   const tEl = $("#spotText");
   tEl.textContent = text || "…";
-  tEl.style.fontSize = fitSize(text || "……") + "px";
+  // with handwriting, the recognised text is a smaller caption under the drawing
+  tEl.style.fontSize = (ink.length ? Math.min(fitSize(text), window.innerHeight * 0.1) : fitSize(text || "……")) + "px";
   tEl.classList.toggle("interim", !!liveText);
   tEl.classList.toggle("waiting", !text);
   $("#spotPy").textContent = boardPinyin && text ? toPinyin(text) : "";
@@ -453,8 +474,8 @@ function renderCloud() {
   $("#cloudPin").textContent = pin;
   $("#cloudUrl").textContent = $("#joinUrl").textContent;
   $("#cloudTitle").innerHTML = meta.prompt
-    ? `Say: ${escapeHtml(meta.prompt)}${boardPinyin ? `<span class="py">${escapeHtml(meta.promptPinyin || toPinyin(meta.prompt))}</span>` : ""}`
-    : "What are we saying? 我们在说什么？";
+    ? `${escapeHtml(meta.prompt)}${boardPinyin ? `<span class="py">${escapeHtml(meta.promptPinyin || toPinyin(meta.prompt))}</span>` : ""}`
+    : "Our answers · 我们的回答";
   const liveNow = [...live.entries()].filter(([id, t]) => t && players.has(id));
   $("#cloudLive").innerHTML = liveNow.map(([id, t]) =>
     `<span>🎤 <b>${escapeHtml(players.get(id).name)}</b>: ${escapeHtml(t)}</span>`).join("");
@@ -603,7 +624,7 @@ onChildRemoved(r("players"), (s) => {
 // Words each student has finished saying: said/{uid}/{pushId} = { text, at }
 const onSaid = (s) => {
   const v = s.val() || {};
-  const items = Object.keys(v).sort().reverse().map((id) => ({ id, text: v[id].text }));
+  const items = Object.keys(v).sort().reverse().map((id) => ({ id, text: v[id].text, ink: parseInk(v[id].ink) }));
   const grew = items.length > (said.get(s.key)?.length || 0);
   said.set(s.key, items);
   if (grew) heardFrom(s.key);

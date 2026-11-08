@@ -108,4 +108,36 @@ export function toPinyin(s) {
     .replace(/\s+([，。！？、；：,.!?;:])/g, "$1");
 }
 
+// ── Handwriting ─────────────────────────────────────────────
+/** Read the handwriting stored with a word: [{ t: "好", s: [[x, y, x, y, …], …] }, …] (0–255 box). */
+export function parseInk(str) {
+  if (!str) return [];
+  try {
+    const v = JSON.parse(str);
+    return Array.isArray(v) ? v.filter((g) => g && Array.isArray(g.s)) : [];
+  } catch { return []; }
+}
+
+/** Draw handwriting as small SVG squares with a 田字格 guide. */
+export function inkSvg(groups, px, cls = "ink") {
+  return groups.map((g) => {
+    const lines = g.s.map((pts) => {
+      const xy = [];
+      for (let i = 0; i + 1 < pts.length; i += 2) xy.push(`${+pts[i] || 0},${+pts[i + 1] || 0}`);
+      if (xy.length === 1) xy.push(xy[0]);
+      return `<polyline points="${xy.join(" ")}"/>`;
+    }).join("");
+    return `<svg class="${cls}" viewBox="0 0 256 256" width="${px}" height="${px}" aria-label="${escapeHtml(g.t || "")}">
+      <path class="ink-grid" d="M128 0V256M0 128H256M0 0L256 256M256 0L0 256"/><g class="ink-strokes">${lines}</g></svg>`;
+  }).join("");
+}
+
+/** Ways a student can answer. Older rooms without this setting = speaking only. */
+export const INPUTS = { speak: "🎤 Speak", type: "⌨️ Type", write: "✍️ Write" };
+export function inputsOf(meta) {
+  const v = meta?.inputs || { speak: true };
+  const on = Object.keys(INPUTS).filter((k) => v[k]);
+  return on.length ? on : ["speak"];
+}
+
 export const $ = (sel, root = document) => root.querySelector(sel);

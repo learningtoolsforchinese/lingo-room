@@ -51,6 +51,8 @@
               ".validate": "newData.hasChildren(['text', 'at'])",
               "text": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200" },
               "at": { ".validate": "newData.isNumber()" },
+              "via": { ".validate": "newData.val() === 'speak' || newData.val() === 'type' || newData.val() === 'write'" },
+              "ink": { ".validate": "newData.isString() && newData.val().length <= 30000" },
               "$other": { ".validate": false }
             }
           }

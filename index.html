@@ -48,26 +48,48 @@
         <div class="word hanzi" id="pWord"></div>
         <div class="py" id="pPy"></div>
       </div>
-      <div class="stu-hint" id="hintBox">Tap the mic and speak 🗣</div>
+      <div class="stu-hint" id="hintBox">Answer below 👇</div>
 
-      <div class="heard">
-        <div class="text hanzi" id="heardText"></div>
-        <div class="py" id="heardPy"></div>
+      <div class="tabs hidden" id="modeTabs">
+        <button data-mode="speak">🎤 Speak</button>
+        <button data-mode="type">⌨️ Type</button>
+        <button data-mode="write">✍️ Write</button>
       </div>
+
+      <!-- Speak -->
+      <div class="pane" id="paneSpeak">
+        <div class="heard">
+          <div class="text hanzi" id="heardText"></div>
+          <div class="py" id="heardPy"></div>
+        </div>
+        <div class="mic-wrap">
+          <button class="mic" id="mic" aria-label="Tap to speak">🎤</button>
+          <div class="note" id="micNote">Tap to speak</div>
+        </div>
+      </div>
+
+      <!-- Type -->
+      <form class="pane type-row hidden" id="paneType">
+        <input id="typeInput" class="hanzi" maxlength="200" autocomplete="off" placeholder="输入中文…">
+        <button class="btn primary">Send</button>
+      </form>
+
+      <!-- Write (handwriting board) -->
+      <div class="pane hidden" id="paneWrite">
+        <div class="w-answer">
+          <div class="w-text hanzi" id="wText"><span class="muted">Write a character below ✍️</span></div>
+          <button class="btn" id="wBack" title="Delete last character">⌫</button>
+          <button class="btn primary" id="wSend">Send</button>
+        </div>
+        <div class="w-cands hanzi" id="wCands"></div>
+        <div class="w-board">
+          <canvas id="wCanvas"></canvas>
+          <button class="w-tool left" id="wUndo" title="Undo last stroke">↶</button>
+          <button class="w-tool right" id="wClear" title="Clear">✕</button>
+        </div>
+      </div>
+
       <div class="feedback" id="feedback"></div>
-
-      <div class="mic-wrap">
-        <button class="mic" id="mic" aria-label="Tap to speak">🎤</button>
-        <div class="note" id="micNote">Tap to speak</div>
-      </div>
-
-      <div>
-        <div class="note"><a href="#" id="typeToggle">Can't use the mic? Type instead</a></div>
-        <form class="type-row hidden" id="typeForm">
-          <input id="typeInput" class="hanzi" maxlength="200" autocomplete="off" placeholder="输入中文…">
-          <button class="btn primary">Send</button>
-        </form>
-      </div>
 
       <div class="mine-wrap">
         <h3><span>My words</span><span id="mineCount"></span></h3>
