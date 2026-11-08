@@ -38,17 +38,17 @@ Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept
 1. Create a new **public** repo on GitHub, e.g. `lingo-room`.
 2. Push this folder to it (see the commands below).
 3. In the repo, go to **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main` / `(root)` → Save.**
-4. After about a minute your site is live at `https://sovathanalun.github.io/lingo-room/`.
-   - Teacher: `https://sovathanalun.github.io/lingo-room/host.html`
-   - Students: `https://sovathanalun.github.io/lingo-room/`, or they scan the QR code.
+4. After about a minute your site is live at `https://learningtoolsforchinese.github.io/lingo-room/`.
+   - Teacher: `https://learningtoolsforchinese.github.io/lingo-room/host.html`
+   - Students: `https://learningtoolsforchinese.github.io/lingo-room/`, or they scan the QR code.
 
 ```bash
-git remote add origin https://github.com/sovathanalun/lingo-room.git
+git remote add origin https://github.com/learningtoolsforchinese/lingo-room.git
 git push -u origin main --tags
 ```
 
 ### 3. Allow your site in Firebase Auth
-**Authentication → Settings → Authorized domains → Add domain →** `sovathanalun.github.io`
+**Authentication → Settings → Authorized domains → Add domain →** `learningtoolsforchinese.github.io`
 
 Without this step, students get an error when they join.
 
