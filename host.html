@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f4ef">
   <title>Lingo Room · Teacher</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=0.8.0">
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 </head>
 <body>
@@ -28,11 +28,13 @@
       <button class="btn ghost" id="clearPrompt" title="Hide the word">✕</button>
     </div>
 
-    <div class="chips" id="inputChips" title="How students can answer (choose one or more)">
+    <div class="chips" title="How students answer — their screens switch straight away">
       <span class="lbl">Answer by</span>
-      <button class="chip" data-k="speak">🎤 Speak</button>
-      <button class="chip" data-k="type">⌨️ Type</button>
-      <button class="chip" data-k="write">✍️ Write</button>
+      <div class="seg answer-seg" id="inputSeg">
+        <button data-k="speak">🎤 Speak</button>
+        <button data-k="type">⌨️ Type</button>
+        <button data-k="write">✍️ Write</button>
+      </div>
     </div>
 
     <div class="grow"></div>
@@ -141,6 +143,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="host.js"></script>
+  <script type="module" src="host.js?v=0.8.0"></script>
 </body>
 </html>

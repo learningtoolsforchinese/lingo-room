@@ -5,7 +5,7 @@ import {
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, LANGS, $,
   parseInk, inkSvg, inputsOf,
-} from "./common.js";
+} from "./common.js?v=0.8.0";
 
 const POINTS = 1000; // points for each word the teacher marks correct
 
@@ -123,12 +123,10 @@ $("#listCancel").onclick = () => $("#listDlg").close();
 $("#listSave").onclick = () => { ls.set(LS.list, $("#listText").value); ls.set(LS.idx, "0"); $("#listDlg").close(); };
 
 $("#openMic").onchange = (e) => saveMeta({ open: e.target.checked });
-$("#inputChips").onclick = (e) => {
-  const k = e.target.closest(".chip")?.dataset.k;
-  if (!k) return;
-  const on = new Set(inputsOf(meta));
-  if (on.has(k)) { if (on.size === 1) return; on.delete(k); } else on.add(k);   // keep at least one
-  saveMeta({ inputs: { speak: on.has("speak"), type: on.has("type"), write: on.has("write") } });
+// One answer type at a time; students' screens switch to it straight away.
+$("#inputSeg").onclick = (e) => {
+  const k = e.target.closest("button")?.dataset.k;
+  if (k) saveMeta({ inputs: { speak: k === "speak", type: k === "type", write: k === "write" } });
 };
 $("#stuPy").onchange = (e) => saveMeta({ showPinyin: e.target.checked });
 langSel.onchange = (e) => saveMeta({ lang: e.target.value });
@@ -221,8 +219,8 @@ $("#endConfirm").onclick = async () => {
 
 function renderControls() {
   $("#openMic").checked = !!meta.open;
-  const on = inputsOf(meta);
-  document.querySelectorAll("#inputChips .chip").forEach((c) => c.classList.toggle("on", on.includes(c.dataset.k)));
+  const current = inputsOf(meta)[0];
+  document.querySelectorAll("#inputSeg button").forEach((b) => b.classList.toggle("on", b.dataset.k === current));
   $("#stuPy").checked = !!meta.showPinyin;
   $("#showPy").checked = boardPinyin;
   langSel.value = meta.lang || "zh-CN";
@@ -317,8 +315,7 @@ function renderCard(id, flash = false) {
 }
 
 function renderBanner() {
-  const on = inputsOf(meta);
-  $("#bLbl").textContent = on.length === 1 ? { speak: "Say this", type: "Type this", write: "Write this" }[on[0]] : "Answer this";
+  $("#bLbl").textContent = { speak: "Say this", type: "Type this", write: "Write this" }[inputsOf(meta)[0]];
   $("#banner").classList.toggle("hidden", !meta.prompt);
   $("#bWord").textContent = meta.prompt || "";
   $("#bPy").textContent = boardPinyin && meta.prompt ? meta.promptPinyin || toPinyin(meta.prompt) : "";

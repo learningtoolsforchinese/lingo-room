@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { pinyin } from "https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/+esm";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js?v=0.8.0";
 
 const params = new URLSearchParams(location.search);
 
@@ -190,7 +190,7 @@ export const INPUTS = { speak: "🎤 Speak", type: "⌨️ Type", write: "✍️
 export function inputsOf(meta) {
   const v = meta?.inputs || { speak: true };
   const on = Object.keys(INPUTS).filter((k) => v[k]);
-  return on.length ? on : ["speak"];
+  return on.length ? [on[0]] : ["speak"];   // one answer type at a time
 }
 
 export const $ = (sel, root = document) => root.querySelector(sel);

@@ -405,3 +405,7 @@ dialog textarea { width: 100%; min-height: 200px; font-size: 18px; }
 .hist-mark { font-weight: 900; font-size: 20px; width: 24px; text-align: center; }
 .item.ok .hist-mark { color: var(--green); }
 .item.no .hist-mark { color: var(--bad); }
+
+/* Teacher: Answer by (one at a time) */
+.answer-seg button { padding: 6px 12px; font-size: 14px; }
+.answer-seg button.on { background: var(--red); color: #fff; box-shadow: none; }

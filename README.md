@@ -11,7 +11,7 @@ Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase 
 
 ## How it works
 
-- **The teacher chooses how students answer** with the **Answer by** buttons: 🎤 **Speak**, ⌨️ **Type** and/or ✍️ **Write**. Turn on one or more; with more than one, students get tabs to switch.
+- **The teacher chooses how students answer** with the **Answer by** switch: 🎤 **Speak**, ⌨️ **Type** or ✍️ **Write**, one at a time. The selected one is highlighted, and every student's screen switches to it straight away.
 - **✍️ Write is a handwriting board.** The student draws one character in the 田字格 box, taps the right character from the suggestions, then writes the next one, and taps **Send**. The teacher sees the student's **actual handwriting** next to the recognised characters, on the card and big in Spotlight, so stroke mistakes are visible. If no suggestion fits, **✍️ Keep my drawing** sends the drawing as it is.
 - **The app never corrects students.** It shows exactly what each student said, so the teacher can do the correcting.
 - **Each student's card lists every word they've said,** newest at the top. While a student is still speaking, their words appear in grey with ●●●.
@@ -100,6 +100,14 @@ npx firebase-tools@13 emulators:start --only auth,database --project demo-lingor
 python3 -m http.server 8080
 ```
 Then open `http://localhost:8080/host.html?emu=1` (the emulator shows a test Google account picker) and, in other tabs, `http://localhost:8080/?emu=1`. In emulator mode each tab is a separate student.
+
+## Releasing an update
+
+Before pushing, stamp the new version on the file links so browsers load the fresh files:
+
+```bash
+sh scripts/set-version.sh 0.8.0
+```
 
 ## Files
 | File | Purpose |
