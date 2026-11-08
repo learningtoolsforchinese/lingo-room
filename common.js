@@ -32,7 +32,7 @@ export async function boot() {
     throw new Error("Firebase config missing");
   }
   const config = useEmulator
-    ? { apiKey: "demo-key", projectId: "demo-speakroom", databaseURL: "http://127.0.0.1:9000?ns=demo-speakroom-default-rtdb" }
+    ? { apiKey: "demo-key", projectId: "demo-lingoroom", databaseURL: "http://127.0.0.1:9000?ns=demo-lingoroom-default-rtdb" }
     : firebaseConfig;
   const app = initializeApp(config);
   // In emulator mode every tab is a separate user, so you can test many students in one browser.

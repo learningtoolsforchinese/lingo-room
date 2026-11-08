@@ -1,6 +1,8 @@
-# 说吧 Speak Room
+# Lingo Room
 
-A free, Kahoot-style speaking app for Chinese class. Students join with a PIN and their name, tap the mic, and speak Chinese. Their words show up live on the teacher's screen, with pinyin.
+A free, Kahoot-style live classroom app for language lessons. Students join with a PIN and their name, then respond, and their answers show up live on the teacher's screen.
+
+The first version is built for **Chinese speaking practice** (speech recognition plus pinyin). It's designed to grow into other activities, such as writing, and other languages, such as English and French.
 
 - **Teacher page:** `host.html`. Shows the PIN, a QR code, a live card for each student and a leaderboard.
 - **Student page:** `index.html`. Enter the PIN and a name, then tap 🎤 to speak (or type).
@@ -21,7 +23,7 @@ Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept
 ## Setup (about 10 minutes, no credit card)
 
 ### 1. Create the Firebase project
-1. Go to <https://console.firebase.google.com> and click **Create a project**. Name it something like `speak-room`. You can turn off Google Analytics.
+1. Go to <https://console.firebase.google.com> and click **Create a project**. Name it something like `lingo-room`. You can turn off Google Analytics.
 2. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save.**
 3. **Build → Realtime Database → Create database.** Pick a location near you (e.g. Singapore `asia-southeast1`) and choose **Start in locked mode**.
 4. In the Realtime Database, open the **Rules** tab, delete what's there, paste the whole contents of [`database.rules.json`](database.rules.json), and click **Publish**.
@@ -31,15 +33,15 @@ Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept
 > These config values are **not secrets**, so it's fine to put them in a public GitHub repo. The security rules are what protect the data.
 
 ### 2. Put it on GitHub Pages
-1. Create a new **public** repo on GitHub, e.g. `speak-room`.
+1. Create a new **public** repo on GitHub, e.g. `lingo-room`.
 2. Push this folder to it (see the commands below).
 3. In the repo, go to **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main` / `(root)` → Save.**
-4. After about a minute your site is live at `https://<your-username>.github.io/speak-room/`.
-   - Teacher: `https://<your-username>.github.io/speak-room/host.html`
-   - Students: `https://<your-username>.github.io/speak-room/`, or they scan the QR code.
+4. After about a minute your site is live at `https://<your-username>.github.io/lingo-room/`.
+   - Teacher: `https://<your-username>.github.io/lingo-room/host.html`
+   - Students: `https://<your-username>.github.io/lingo-room/`, or they scan the QR code.
 
 ```bash
-git remote add origin https://github.com/<your-username>/speak-room.git
+git remote add origin https://github.com/<your-username>/lingo-room.git
 git push -u origin main --tags
 ```
 
@@ -76,7 +78,7 @@ If the teacher refreshes the page, the same room comes back. Students who refres
 You can try everything on your computer with the Firebase emulator. This needs Java and Node.
 
 ```bash
-npx firebase-tools@13 emulators:start --only auth,database --project demo-speakroom
+npx firebase-tools@13 emulators:start --only auth,database --project demo-lingoroom
 ```
 ```bash
 python3 -m http.server 8080

@@ -4,7 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { boot, withEmu, escapeHtml, toPinyin, isMatch, LANGS, $ } from "./common.js";
 
-const LS = { pin: "speakroom.hostPin", list: "speakroom.wordList", idx: "speakroom.wordIdx", py: "speakroom.boardPinyin" };
+const LS = { pin: "lingoroom.hostPin", list: "lingoroom.wordList", idx: "lingoroom.wordIdx", py: "lingoroom.boardPinyin" };
 const ls = {
   get(k, d = null) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },

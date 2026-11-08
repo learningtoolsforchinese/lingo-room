@@ -4,7 +4,7 @@ import {
 import { boot, withEmu, toPinyin, isMatch, $ } from "./common.js";
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const LS = { pin: "speakroom.pin", name: "speakroom.name" };
+const LS = { pin: "lingoroom.pin", name: "lingoroom.name" };
 const ls = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
