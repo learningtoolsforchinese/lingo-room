@@ -2,7 +2,9 @@ import {
   ref, get, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved,
   serverTimestamp, increment,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, isMatch, LANGS, $ } from "./common.js";
+import { bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, LANGS, $ } from "./common.js";
+
+const POINTS = 1000; // points for each word the teacher marks correct
 
 const LS = { pin: "lingoroom.hostPin", list: "lingoroom.wordList", idx: "lingoroom.wordIdx", py: "lingoroom.boardPinyin" };
 const ls = {
@@ -54,10 +56,7 @@ const uid = user.uid;
 
 // ── Room: resume the teacher's last room, or create a new one ──────────
 function defaultMeta() {
-  return {
-    lang: "zh-CN", mode: "free", target: "", targetPinyin: "", round: 0,
-    open: true, showPinyin: true, acceptSound: true, createdAt: serverTimestamp(),
-  };
+  return { lang: "zh-CN", prompt: "", promptPinyin: "", open: true, showPinyin: true, createdAt: serverTimestamp() };
 }
 
 async function resumeOrCreate() {
@@ -89,14 +88,11 @@ const r = (path) => ref(db, `rooms/${pin}/${path}`);
 // ── State ────────────────────────────────────────────────────────────
 let meta = defaultMeta();
 const players = new Map();   // uid → { name, joinedAt, online }
-const answers = new Map();   // uid → { text, final, round, at }
-const history = new Map();   // uid → [last final sentences] (free talk)
-const lastHistAt = new Map();
-let scores = {};             // uid → total points
-let awards = {};             // uid → { points, order } for the current round
+const said = new Map();      // uid → [{ id, text }] newest first
+const live = new Map();      // uid → text the student is saying right now
+const marks = new Map();     // uid → { wordId: true (correct) | false (incorrect) }
+let scores = {};             // uid → points
 let boardPinyin = ls.get(LS.py, "1") === "1";
-let unsubRound = null;
-let subscribedRound = null;
 
 const grid = $("#grid");
 
@@ -126,36 +122,18 @@ langSel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">
 
 function saveMeta(patch) {
   Object.assign(meta, patch);
-  renderControls(); renderAll();
+  renderControls(); renderBanner(); renderSpot();
   return update(r("meta"), patch);
 }
 
-$("#modeSeg").onclick = (e) => {
-  const m = e.target.closest("button")?.dataset.mode;
-  if (m) saveMeta({ mode: m });
-};
-$("#openMic").onchange = (e) => saveMeta({ open: e.target.checked });
-$("#stuPy").onchange = (e) => saveMeta({ showPinyin: e.target.checked });
-$("#acceptSound").onchange = (e) => saveMeta({ acceptSound: e.target.checked });
-langSel.onchange = (e) => saveMeta({ lang: e.target.value });
-$("#showPy").onchange = (e) => { boardPinyin = e.target.checked; ls.set(LS.py, boardPinyin ? "1" : "0"); renderAll(); };
-
-function startRound(word) {
-  word = word.trim();
-  if (!word) { $("#targetInput").focus(); return; }
-  $("#targetInput").value = word;
-  const round = (meta.round || 0) + 1;
-  awards = {};
-  Object.assign(meta, { mode: "target", target: word, targetPinyin: toPinyin(word), round, open: true });
-  update(roomRef, {
-    "meta/mode": "target", "meta/target": word, "meta/targetPinyin": meta.targetPinyin,
-    "meta/round": round, "meta/open": true, answers: null,
-  });
-  answers.clear();
-  renderControls(); renderAll();
+function showPrompt(word) {
+  word = (word || "").trim();
+  $("#promptInput").value = word;
+  saveMeta({ prompt: word, promptPinyin: word ? toPinyin(word) : "" });
 }
-$("#startRound").onclick = () => startRound($("#targetInput").value);
-$("#targetInput").onkeydown = (e) => { if (e.key === "Enter") startRound(e.target.value); };
+$("#showPrompt").onclick = () => showPrompt($("#promptInput").value);
+$("#promptInput").onkeydown = (e) => { if (e.key === "Enter") showPrompt(e.target.value); };
+$("#clearPrompt").onclick = () => showPrompt("");
 
 function wordList() {
   return (ls.get(LS.list, "") || "").split("\n").map((s) => s.trim()).filter(Boolean);
@@ -166,25 +144,36 @@ $("#nextWord").onclick = () => {
   let i = parseInt(ls.get(LS.idx, "0"), 10) || 0;
   if (i >= list.length) i = 0;
   ls.set(LS.idx, String(i + 1));
-  startRound(list[i]);
+  showPrompt(list[i]);
 };
 function openList() { $("#listText").value = ls.get(LS.list, ""); $("#listDlg").showModal(); }
 $("#editList").onclick = openList;
 $("#listCancel").onclick = () => $("#listDlg").close();
 $("#listSave").onclick = () => { ls.set(LS.list, $("#listText").value); ls.set(LS.idx, "0"); $("#listDlg").close(); };
 
-$("#clearBoard").onclick = () => { remove(r("answers")); answers.clear(); history.clear(); renderAll(); };
+$("#openMic").onchange = (e) => saveMeta({ open: e.target.checked });
+$("#stuPy").onchange = (e) => saveMeta({ showPinyin: e.target.checked });
+langSel.onchange = (e) => saveMeta({ lang: e.target.value });
+$("#showPy").onchange = (e) => { boardPinyin = e.target.checked; ls.set(LS.py, boardPinyin ? "1" : "0"); renderAll(); };
+
+$("#clearBoard").onclick = () => {
+  if (!confirm("Clear everyone's words from the board? Scores are kept.")) return;
+  update(roomRef, { said: null, answers: null, marks: null });
+  said.clear(); live.clear(); marks.clear();
+  renderAll();
+};
 $("#resetScores").onclick = () => {
-  if (!confirm("Reset everyone's score to 0?")) return;
-  update(roomRef, { scores: null, rounds: null });
-  awards = {}; renderAll();
+  if (!confirm("Reset everyone's score to 0? The ✓/✗ marks are removed too.")) return;
+  update(roomRef, { scores: null, marks: null });
+  scores = {}; marks.clear();
+  renderAll();
 };
 $("#fullscreen").onclick = () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.();
 };
 $("#endRoom").onclick = async () => {
-  if (!confirm("End this class? The room and all answers will be deleted.")) return;
+  if (!confirm("End this class? The room and all words will be deleted.")) return;
   await remove(roomRef);
   await remove(ref(db, `teachers/${uid}/room`)).catch(() => {});
   ls.del(LS.pin);
@@ -197,41 +186,43 @@ $("#endRoom").onclick = async () => {
 };
 
 function renderControls() {
-  document.querySelectorAll("#modeSeg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === meta.mode));
-  $("#targetCtl").style.opacity = meta.mode === "target" ? 1 : 0.55;
   $("#openMic").checked = !!meta.open;
   $("#stuPy").checked = !!meta.showPinyin;
-  $("#acceptSound").checked = meta.acceptSound !== false;
   $("#showPy").checked = boardPinyin;
   langSel.value = meta.lang || "zh-CN";
-  if (meta.target && !$("#targetInput").value) $("#targetInput").value = meta.target;
+  if (meta.prompt && document.activeElement !== $("#promptInput")) $("#promptInput").value = meta.prompt;
 }
 
-// ── Scoring ──────────────────────────────────────────────────────────
-function maybeAward(id, a) {
-  if (meta.mode !== "target" || !meta.target || !a?.final) return;
-  if (a.round !== meta.round || awards[id] || !players.has(id)) return;
-  if (!isMatch(a.text, meta.target, meta.acceptSound !== false)) return;
-  const order = Object.keys(awards).length;          // 0 = first correct
-  const points = Math.max(500, 1000 - order * 100);  // 1000, 900, 800 … min 500
-  awards[id] = { points, order: order + 1 };
-  update(roomRef, {
-    [`rounds/${meta.round}/${id}`]: { points, order: order + 1 },
-    [`scores/${id}`]: increment(points),
-  });
+// ── Marking ✓ / ✗ ────────────────────────────────────────────────────
+/** Mark a word correct (true) or incorrect (false). Clicking the same mark again removes it. */
+function mark(id, wordId, value) {
+  if (!id || !wordId) return;
+  const m = { ...(marks.get(id) || {}) };
+  const before = m[wordId];
+  const after = before === value ? null : value;
+  const delta = (after === true ? 1 : 0) - (before === true ? 1 : 0);
+  if (after === null) delete m[wordId]; else m[wordId] = after;
+  marks.set(id, m);
+  const upd = { [`marks/${id}/${wordId}`]: after };
+  if (delta) {
+    upd[`scores/${id}`] = increment(delta * POINTS);
+    scores[id] = (scores[id] || 0) + delta * POINTS;
+  }
+  update(roomRef, upd);
+  renderCard(id); renderLeaders();
 }
 
-function subscribeRound(round) {
-  unsubRound?.();
-  unsubRound = null;
-  subscribedRound = round;
-  awards = {};
-  if (!round) return;
-  unsubRound = onValue(r(`rounds/${round}`), (s) => {
-    awards = { ...(s.val() || {}), ...awards };
-    renderAll();
-  });
-}
+grid.addEventListener("click", (e) => {
+  const mk = e.target.closest(".mk");
+  if (mk) {
+    const li = mk.closest(".item");
+    mark(li.dataset.uid, li.dataset.id, mk.dataset.v === "1");
+    return;
+  }
+  if (e.target.closest(".kick")) return;
+  const card = e.target.closest(".card");
+  if (card) openSpot(card.id.slice(2), false);
+});
 
 // ── Rendering ────────────────────────────────────────────────────────
 function cardEl(id) {
@@ -240,15 +231,16 @@ function cardEl(id) {
   el = document.createElement("div");
   el.className = "card";
   el.id = "c-" + id;
-  el.innerHTML = `<div class="name"><span class="dot"></span><span class="nm"></span></div>
-    <span class="badge"></span><div class="text hanzi"></div><div class="py"></div><div class="hist hanzi"></div>
+  el.innerHTML = `<div class="card-head"><span class="dot"></span><span class="nm"></span><span class="score"></span></div>
+    <ul class="list"></ul>
     <button class="kick" title="Remove student">✕ remove</button>`;
   el.querySelector(".kick").onclick = () => {
     const p = players.get(id);
     if (!confirm(`Remove ${p?.name || "this student"} from the room?`)) return;
-    update(roomRef, { [`players/${id}`]: null, [`answers/${id}`]: null, [`scores/${id}`]: null });
+    update(roomRef, {
+      [`players/${id}`]: null, [`answers/${id}`]: null, [`said/${id}`]: null, [`marks/${id}`]: null, [`scores/${id}`]: null,
+    });
   };
-  el.onclick = (e) => { if (!e.target.closest(".kick")) openSpot(id, false); };
   // keep cards ordered by join time
   const mine = players.get(id)?.joinedAt || 0;
   const after = [...grid.querySelectorAll(".card")].find((c) => (players.get(c.id.slice(2))?.joinedAt || 0) > mine);
@@ -256,56 +248,54 @@ function cardEl(id) {
   return el;
 }
 
+const pyHtml = (text) => boardPinyin && text ? `<div class="it-py">${escapeHtml(toPinyin(text))}</div>` : "";
+
 function renderCard(id, flash = false) {
   const p = players.get(id);
   if (!p) { document.getElementById("c-" + id)?.remove(); return; }
   grid.querySelector(".empty")?.remove();
   const el = cardEl(id);
-  const a = answers.get(id);
-  const target = meta.mode === "target" && meta.round > 0;
-  const current = a && (!target || a.round === meta.round);
-  const award = target ? awards[id] : null;
+  const liveText = live.get(id) || "";
+  const items = said.get(id) || [];
+  const m = marks.get(id) || {};
 
   el.querySelector(".nm").textContent = p.name;
+  el.querySelector(".score").textContent = scores[id] ? `⭐ ${scores[id]}` : "";
   el.classList.toggle("offline", p.online === false);
-  el.classList.toggle("speaking", !!(current && !a.final && a.text));
-  el.classList.toggle("correct", !!award);
-  el.classList.toggle("wrong", !!(target && !award && current && a.final && a.text));
+  el.classList.toggle("speaking", !!liveText);
 
-  const text = current ? a.text || "" : "";
-  const tEl = el.querySelector(".text");
-  tEl.textContent = text || (target ? "…" : "");
-  tEl.classList.toggle("interim", !current || !a.final);
-  el.querySelector(".py").textContent = boardPinyin && text ? toPinyin(text) : "";
-  el.querySelector(".badge").textContent = award ? `+${award.points}` : "";
-  el.querySelector(".badge").style.color = "var(--green)";
-
-  const hist = !target ? (history.get(id) || []).slice(text && a?.final ? 1 : 0, 3) : [];
-  el.querySelector(".hist").innerHTML = hist.map((h) => `<div>${escapeHtml(h)}</div>`).join("");
-  el.querySelector(".hist").classList.toggle("hidden", !hist.length);
+  let html = liveText
+    ? `<li class="item live"><div class="it-main"><div class="it-text hanzi">${escapeHtml(liveText)}</div>${pyHtml(liveText)}</div><span class="typing">●●●</span></li>`
+    : "";
+  html += items.map((it) => {
+    const st = m[it.id];
+    return `<li class="item ${st === true ? "ok" : st === false ? "no" : ""}" data-uid="${escapeHtml(id)}" data-id="${escapeHtml(it.id)}">
+      <div class="it-main"><div class="it-text hanzi">${escapeHtml(it.text)}</div>${pyHtml(it.text)}</div>
+      <div class="it-btns"><button class="mk ok" data-v="1" title="Correct (+${POINTS})">✓</button><button class="mk no" data-v="0" title="Incorrect">✗</button></div>
+    </li>`;
+  }).join("");
+  el.querySelector(".list").innerHTML = html || `<li class="item empty-item">No words yet</li>`;
 
   if (flash) { el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 180); }
   if (id === spotId) renderSpot();
 }
 
 function renderBanner() {
-  const show = meta.mode === "target" && meta.round > 0 && meta.target;
-  $("#banner").classList.toggle("hidden", !show);
-  if (!show) return;
-  $("#bWord").textContent = meta.target;
-  $("#bPy").textContent = boardPinyin ? meta.targetPinyin || toPinyin(meta.target) : "";
-  $("#bRound").textContent = meta.round;
-  $("#bDone").textContent = Object.keys(awards).filter((id) => players.has(id)).length;
-  $("#bTotal").textContent = [...players.values()].filter((p) => p.online !== false).length;
+  $("#banner").classList.toggle("hidden", !meta.prompt);
+  $("#bWord").textContent = meta.prompt || "";
+  $("#bPy").textContent = boardPinyin && meta.prompt ? meta.promptPinyin || toPinyin(meta.prompt) : "";
 }
 
 function renderLeaders() {
   const rows = Object.entries(scores)
-    .filter(([id]) => players.has(id))
-    .sort((a, b) => b[1] - a[1]).slice(0, 10);
+    .filter(([id, pts]) => players.has(id) && pts > 0)
+    .sort((a, b) => b[1] - a[1] || players.get(a[0]).name.localeCompare(players.get(b[0]).name));
+  const medal = ["🥇", "🥈", "🥉"];
   $("#leaders").innerHTML = rows.length
-    ? rows.map(([id, pts]) => `<li><span>${escapeHtml(players.get(id).name)}</span><b>${pts}</b></li>`).join("")
-    : `<li class="muted">No points yet</li>`;
+    ? rows.map(([id, pts], i) => `<li><span class="rank">${medal[i] || i + 1}</span>
+        <span class="lname">${escapeHtml(players.get(id).name)}</span>
+        <span class="lcount">✓ ${Math.round(pts / POINTS)}</span><b>${pts}</b></li>`).join("")
+    : `<li class="muted">Mark words ✓ to give points</li>`;
 }
 
 function renderCount() {
@@ -314,9 +304,8 @@ function renderCount() {
 
 function renderAll() {
   for (const id of players.keys()) renderCard(id);
-  renderSpot();
   if (!players.size && !grid.querySelector(".empty")) grid.innerHTML = `<div class="empty">Waiting for students to join…</div>`;
-  renderBanner(); renderLeaders(); renderCount(); renderJoinNames();
+  renderBanner(); renderLeaders(); renderCount(); renderJoinNames(); renderSpot();
 }
 
 // ── Spotlight: one student's words, full screen ──────────────────────
@@ -356,8 +345,8 @@ function stepSpot(dir) {
 /** Biggest font size that fits the text in the middle of the screen, trying 1–8 lines. */
 function fitSize(text) {
   // Chinese/Japanese characters are about 1em wide, Latin letters and spaces about 0.6em.
-  const units = [...text].reduce((n, c) => n + (/[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(c) ? 1 : 0.6), 0) || 1;
-  const W = window.innerWidth * 0.9, H = window.innerHeight * 0.55;
+  const units = [...text].reduce((n, c) => n + (/[⺀-鿿豈-﫿＀-￯]/.test(c) ? 1 : 0.6), 0) || 1;
+  const W = window.innerWidth * 0.9, H = window.innerHeight * 0.45;
   let best = 28;
   for (let lines = 1; lines <= 8; lines++) {
     const size = Math.min((W / Math.ceil(units / lines)) * 0.92, H / (lines * 1.18));
@@ -370,33 +359,47 @@ function renderSpot() {
   if (spotId === null || spot.classList.contains("hidden")) return;
   $("#spotFollow").checked = spotFollow;
   const p = players.get(spotId);
-  const a = answers.get(spotId);
-  const target = meta.mode === "target" && meta.round > 0 && meta.target;
-  const current = a && (!target || a.round === meta.round);
-  const award = target ? awards[spotId] : null;
-  const text = current ? a.text || "" : "";
+  const liveText = live.get(spotId) || "";
+  const items = said.get(spotId) || [];
+  const m = marks.get(spotId) || {};
+  const latest = items[0];
+  const text = liveText || latest?.text || "";
+  const st = !liveText && latest ? m[latest.id] : undefined;
 
   $("#spotName").textContent = p ? p.name : (players.size ? "—" : "Waiting for students…");
-  $("#spotTarget").innerHTML = target ? `Say: <b>${escapeHtml(meta.target)}</b>` : "";
+  $("#spotScore").textContent = p && scores[spotId] ? `⭐ ${scores[spotId]}` : "";
+  $("#spotPrompt").innerHTML = meta.prompt ? `Say: <b>${escapeHtml(meta.prompt)}</b>` : "";
   spot.classList.toggle("offline", p?.online === false);
-  spot.classList.toggle("speaking", !!(current && !a.final && text));
-  spot.classList.toggle("correct", !!award);
-  spot.classList.toggle("wrong", !!(target && !award && current && a.final && text));
+  spot.classList.toggle("correct", st === true);
+  spot.classList.toggle("wrong", st === false);
 
   const tEl = $("#spotText");
-  const shown = text || "…";
-  tEl.textContent = shown;
-  tEl.style.fontSize = (text ? fitSize(text) : fitSize("……")) + "px";
-  tEl.classList.toggle("interim", !!(current && !a.final));
+  tEl.textContent = text || "…";
+  tEl.style.fontSize = fitSize(text || "……") + "px";
+  tEl.classList.toggle("interim", !!liveText);
   tEl.classList.toggle("waiting", !text);
   $("#spotPy").textContent = boardPinyin && text ? toPinyin(text) : "";
-  $("#spotBadge").textContent = award ? `${award.order === 1 ? "🥇 " : "✅ "}+${award.points}` : "";
+
+  const marksEl = $("#spotMarks");
+  marksEl.classList.toggle("hidden", !(!liveText && latest));
+  marksEl.dataset.id = latest?.id || "";
+  marksEl.querySelector(".ok").classList.toggle("on", st === true);
+  marksEl.querySelector(".no").classList.toggle("on", st === false);
+  marksEl.querySelector(".ok").textContent = st === true ? `✓ Correct +${POINTS}` : "✓ Correct";
+
+  const earlier = items.slice(liveText ? 0 : 1, 6);
+  $("#spotPrevList").innerHTML = earlier.map((it) =>
+    `<span class="${m[it.id] === true ? "ok" : m[it.id] === false ? "no" : ""}">${escapeHtml(it.text)}${m[it.id] === true ? " ✓" : m[it.id] === false ? " ✗" : ""}</span>`).join("");
 }
 
 $("#spotBtn").onclick = () => openSpot(null, true);
 $("#spotClose").onclick = closeSpot;
 $("#spotPrev").onclick = () => stepSpot(-1);
 $("#spotNext").onclick = () => stepSpot(1);
+$("#spotMarks").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (b) mark(spotId, $("#spotMarks").dataset.id, b.dataset.v === "1");
+};
 $("#spotFollow").onchange = (e) => {
   spotFollow = e.target.checked;
   if (spotFollow && lastSpeaker) spotId = lastSpeaker;
@@ -405,61 +408,75 @@ $("#spotFollow").onchange = (e) => {
 document.addEventListener("keydown", (e) => {
   if (spotId === null) return;
   if (e.target instanceof Element && e.target.closest("input, textarea, select, dialog")) return;
-  if (e.key === "Escape") closeSpot();
-  else if (e.key === "ArrowRight") stepSpot(1);
-  else if (e.key === "ArrowLeft") stepSpot(-1);
-  else if (e.key.toLowerCase() === "f") { $("#spotFollow").click(); }
+  const k = e.key.toLowerCase();
+  if (k === "escape") closeSpot();
+  else if (k === "arrowright") stepSpot(1);
+  else if (k === "arrowleft") stepSpot(-1);
+  else if (k === "f") $("#spotFollow").click();
+  else if (k === "c" || k === "x") {
+    const id = $("#spotMarks").dataset.id;
+    if (id && !$("#spotMarks").classList.contains("hidden")) mark(spotId, id, k === "c");
+  }
 });
 window.addEventListener("resize", renderSpot);
+
+function heardFrom(id) {
+  lastSpeaker = id;
+  if (spotId !== null && spotFollow) spotId = id;
+}
 
 // ── Live listeners ───────────────────────────────────────────────────
 onValue(r("meta"), (s) => {
   const v = s.val();
   if (!v) return; // room deleted (End class)
   meta = v;
-  if (v.round !== subscribedRound) subscribeRound(v.round);
-  renderControls(); renderAll();
+  renderControls(); renderBanner(); renderSpot();
 });
 
 const onPlayer = (s) => {
   players.set(s.key, s.val());
   renderCard(s.key);
-  // a student who joined late may already have an answer waiting
-  if (answers.has(s.key)) maybeAward(s.key, answers.get(s.key));
-  renderBanner(); renderLeaders(); renderCount(); renderJoinNames();
+  renderLeaders(); renderCount(); renderJoinNames();
 };
 onChildAdded(r("players"), onPlayer);
 onChildChanged(r("players"), onPlayer);
 onChildRemoved(r("players"), (s) => {
-  players.delete(s.key); answers.delete(s.key); history.delete(s.key);
+  players.delete(s.key); said.delete(s.key); live.delete(s.key); marks.delete(s.key);
   document.getElementById("c-" + s.key)?.remove();
   if (lastSpeaker === s.key) lastSpeaker = null;
-  if (spotId === s.key) { spotId = orderedIds()[0] ?? ""; renderSpot(); }
+  if (spotId === s.key) spotId = orderedIds()[0] ?? "";
   renderAll();
 });
 
-const onAnswer = (s) => {
-  const a = s.val();
-  answers.set(s.key, a);
-  if (a?.final && a.text && lastHistAt.get(s.key) !== a.at) {
-    lastHistAt.set(s.key, a.at);
-    const h = history.get(s.key) || [];
-    h.unshift(a.text);
-    history.set(s.key, h.slice(0, 4));
-  }
-  maybeAward(s.key, a);
-  if (a?.text) {
-    lastSpeaker = s.key;
-    if (spotId !== null && spotFollow) spotId = s.key;
-  }
-  renderCard(s.key, true);
-  renderBanner();
+// Words each student has finished saying: said/{uid}/{pushId} = { text, at }
+const onSaid = (s) => {
+  const v = s.val() || {};
+  const items = Object.keys(v).sort().reverse().map((id) => ({ id, text: v[id].text }));
+  const grew = items.length > (said.get(s.key)?.length || 0);
+  said.set(s.key, items);
+  if (grew) heardFrom(s.key);
+  renderCard(s.key, grew);
 };
-onChildAdded(r("answers"), onAnswer);
-onChildChanged(r("answers"), onAnswer);
-onChildRemoved(r("answers"), (s) => { answers.delete(s.key); renderCard(s.key); });
+onChildAdded(r("said"), onSaid);
+onChildChanged(r("said"), onSaid);
+onChildRemoved(r("said"), (s) => { said.delete(s.key); renderCard(s.key); });
 
-onValue(r("scores"), (s) => { scores = s.val() || {}; renderLeaders(); });
+// What a student is saying right now (before they finish): answers/{uid} = { text, at }
+const onLive = (s) => {
+  const t = s.val()?.text || "";
+  if (t) { live.set(s.key, t); heardFrom(s.key); } else live.delete(s.key);
+  renderCard(s.key);
+};
+onChildAdded(r("answers"), onLive);
+onChildChanged(r("answers"), onLive);
+onChildRemoved(r("answers"), (s) => { live.delete(s.key); renderCard(s.key); });
+
+const onMarks = (s) => { marks.set(s.key, s.val() || {}); renderCard(s.key); };
+onChildAdded(r("marks"), onMarks);
+onChildChanged(r("marks"), onMarks);
+onChildRemoved(r("marks"), (s) => { marks.delete(s.key); renderCard(s.key); });
+
+onValue(r("scores"), (s) => { scores = s.val() || {}; renderAll(); });
 
 renderControls();
 renderAll();

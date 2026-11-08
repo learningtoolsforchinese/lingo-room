@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f4ef">
   <title>Lingo Room · Teacher</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
@@ -18,16 +19,12 @@
   </header>
 
   <section class="host-controls">
-    <div class="seg" id="modeSeg">
-      <button data-mode="free" class="on">🗣 Free talk</button>
-      <button data-mode="target">🎯 Say the word</button>
-    </div>
-
-    <div class="ctl-group" id="targetCtl">
-      <input id="targetInput" class="target-input hanzi" placeholder="e.g. 你好" maxlength="30">
-      <button class="btn primary" id="startRound">Start round</button>
-      <button class="btn" id="nextWord" title="Start a round with the next word from your list">Next ▶</button>
+    <div class="ctl-group">
+      <input id="promptInput" class="prompt-input hanzi" placeholder="Word to say (optional)" maxlength="40">
+      <button class="btn primary" id="showPrompt" title="Show this word on students' phones">Show</button>
+      <button class="btn" id="nextWord" title="Show the next word from your list">Next ▶</button>
       <button class="btn ghost" id="editList">Word list</button>
+      <button class="btn ghost" id="clearPrompt" title="Hide the word">✕</button>
     </div>
 
     <div class="grow"></div>
@@ -36,34 +33,30 @@
       <label class="toggle"><input type="checkbox" id="openMic" checked> Mics on</label>
       <label class="toggle"><input type="checkbox" id="showPy" checked> Pinyin on board</label>
       <label class="toggle"><input type="checkbox" id="stuPy" checked> Pinyin for students</label>
-      <label class="toggle" title="Count 他/她 or 妈/媽 as correct when the sound and tones match"><input type="checkbox" id="acceptSound" checked> Accept same sound</label>
       <select id="lang"></select>
     </div>
 
     <div class="ctl-group">
-      <button class="btn" id="clearBoard">Clear board</button>
-      <button class="btn" id="resetScores">Reset scores</button>
       <button class="btn gold" id="spotBtn" title="Show what students say in full screen (or click a student's card)">🔍 Spotlight</button>
+      <button class="btn" id="clearBoard">Clear words</button>
+      <button class="btn" id="resetScores">Reset scores</button>
       <button class="btn" id="fullscreen" title="Full-screen page">⛶</button>
       <button class="btn" id="endRoom">End class</button>
     </div>
   </section>
 
   <main class="host-main">
-    <div class="target-banner hidden" id="banner">
+    <div class="prompt-banner hidden" id="banner">
       <div>
+        <div class="lbl">Say this</div>
         <div class="word hanzi" id="bWord"></div>
         <div class="py" id="bPy"></div>
-      </div>
-      <div class="meta">
-        Round <span id="bRound">1</span><br>
-        <span class="big"><span id="bDone">0</span>/<span id="bTotal">0</span></span> correct
       </div>
     </div>
     <div class="grid" id="grid"><div class="empty">Waiting for students to join…</div></div>
     <aside class="board-panel">
       <h3>🏆 Leaderboard</h3>
-      <ol id="leaders"><li class="muted">No points yet</li></ol>
+      <ol id="leaders"><li class="muted">Mark words ✓ to give points</li></ol>
     </aside>
   </main>
 
@@ -79,23 +72,11 @@
     </div>
   </div>
 
-  <div class="join-overlay signin hidden" id="signIn">
-    <div class="join-card" style="max-width:440px">
-      <div class="brand" style="font-size:28px">Lingo <span>Room</span></div>
-      <p class="muted" style="margin:6px 0 24px">Teacher sign in</p>
-      <button class="google-btn" id="googleBtn">
-        <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Sign in with Google
-      </button>
-      <div class="err" id="signInErr" style="margin-top:12px"></div>
-      <p class="note" style="margin-top:18px"><a href="./" id="studentLink" style="color:var(--muted)">I'm a student →</a></p>
-    </div>
-  </div>
-
   <div class="spot hidden" id="spot">
     <div class="spot-top">
       <div class="spot-name"><span class="dot"></span><span id="spotName"></span></div>
-      <div class="spot-target hanzi" id="spotTarget"></div>
+      <span class="spot-score" id="spotScore"></span>
+      <div class="spot-prompt hanzi" id="spotPrompt"></div>
       <div class="spot-ctl">
         <label class="toggle" title="Jump to whoever spoke last (key: F)"><input type="checkbox" id="spotFollow"> Follow latest speaker</label>
         <button class="btn" id="spotPrev" title="Previous student (←)">◀</button>
@@ -106,13 +87,30 @@
     <div class="spot-body">
       <div class="spot-text hanzi" id="spotText"></div>
       <div class="spot-py" id="spotPy"></div>
-      <div class="spot-badge" id="spotBadge"></div>
+      <div class="spot-marks hidden" id="spotMarks">
+        <button class="ok" data-v="1" title="Correct, +1000 (key: C)">✓ Correct</button>
+        <button class="no" data-v="0" title="Incorrect (key: X)">✗ Incorrect</button>
+      </div>
+      <div class="spot-prev hanzi" id="spotPrevList"></div>
+    </div>
+  </div>
+
+  <div class="join-overlay signin hidden" id="signIn">
+    <div class="join-card" style="max-width:440px">
+      <div class="brand" style="font-size:28px">Lingo <span>Room</span></div>
+      <p class="muted" style="margin:6px 0 24px">Teacher sign in</p>
+      <button class="google-btn" id="googleBtn">
+        <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="err" id="signInErr" style="margin-top:12px"></div>
+      <p class="note" style="margin-top:18px"><a href="./" id="studentLink">I'm a student →</a></p>
     </div>
   </div>
 
   <dialog id="listDlg">
     <h3 style="margin-top:0">Word list</h3>
-    <p class="muted" style="margin-top:0">One word or sentence per line. “Next ▶” goes through them in order.</p>
+    <p class="muted" style="margin-top:0">One word or sentence per line. “Next ▶” shows them in order.</p>
     <textarea id="listText" class="hanzi" placeholder="你好&#10;谢谢&#10;再见&#10;我是学生"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn" id="listCancel">Cancel</button>

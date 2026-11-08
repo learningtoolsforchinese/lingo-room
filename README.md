@@ -4,21 +4,23 @@ A free, Kahoot-style live classroom app for language lessons. Students join with
 
 The first version is built for **Chinese speaking practice** (speech recognition plus pinyin). It's designed to grow into other activities, such as writing, and other languages, such as English and French.
 
-- **Teacher page:** `host.html`. The teacher signs in with their Google (Gmail) account, then sees the PIN, a QR code, a live card for each student and a leaderboard.
+- **Teacher page:** `host.html`. The teacher signs in with their Google (Gmail) account, then sees the PIN, a QR code, a live card for each student listing everything they said, and a leaderboard.
 - **Student page:** `index.html`. Enter the PIN and a name, then tap 🎤 to speak (or type).
 
 Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase Realtime Database** (free Spark plan) syncs the data live. Speech recognition is the browser's built-in Web Speech API, which is also free.
 
-## Modes
+## How it works
 
-| Mode | What happens |
-|---|---|
-| 🗣 **Free talk** | Students say anything. Each card shows their latest sentence and the last few before it. |
-| 🎯 **Say the word** | The teacher sets a word (or uses **Next ▶** with a word list). Students who say it correctly get points: 1000 for the first, then 900, 800 … down to a minimum of 500. |
+- **The app never corrects students.** It shows exactly what each student said, so the teacher can do the correcting.
+- **Each student's card lists every word they've said,** newest at the top. While a student is still speaking, their words appear in grey with ●●●.
+- **The teacher marks each word ✓ (correct) or ✗ (incorrect).** Each ✓ is worth **+1000 points**. Clicking the same mark again removes it, and the points too.
+- **The leaderboard** is ordered by score and shows how many ✓ each student has.
+- **On the student's phone,** a ✓ shows a celebration: 🎉 *太棒了！Great job!* **+1000**. A ✗ shows a gentle "let's try again! 加油 💪". Students also see their own list of words with the teacher's marks.
+- **Word to say (optional):** the teacher can type a word and click **Show**, or use **Next ▶** with a saved word list. It appears on the board and on every student's phone.
 
-**🔍 Spotlight** shows one student's words in giant text that fills the projector screen, with pinyin, updating live as they speak. Click **🔍 Spotlight** to follow whoever spoke last, or click any student's card to show just that student. Keys: **← →** switch student, **F** turns follow on or off, **Esc** closes.
+**🔍 Spotlight** shows one student's words in giant text that fills the projector screen, with pinyin, updating live, plus big **✓ Correct / ✗ Incorrect** buttons. Click **🔍 Spotlight** to follow whoever spoke last, or click any student's card to show just that student. Keys: **← →** switch student, **C** marks correct, **X** marks incorrect, **F** turns follow on or off, **Esc** closes.
 
-Teacher options: mics on/off, pinyin on the board, pinyin for students, **Accept same sound** (counts 他/她 or 妈/媽 as correct when the syllables and tones match), Simplified (zh-CN) or Traditional (zh-TW), clear board, reset scores, full screen, end class.
+Teacher options: mics on/off, pinyin on the board, pinyin for students, Simplified (zh-CN) or Traditional (zh-TW), clear words (keeps scores), reset scores, full screen, end class.
 
 ---
 
@@ -60,7 +62,7 @@ Without this step, students get an error when they join.
 
 1. Open `host.html` on the projector and **sign in with Google**. The room is created automatically and the PIN and QR code appear.
 2. Students scan the QR code or open the site and type the PIN, then enter their name.
-3. Click **Start ▶**, then choose **Free talk** or **Say the word**.
+3. Click **Start ▶**. Students speak, their words appear on their cards, and you mark each one ✓ or ✗. Use **🔍 Spotlight** to show one student full screen.
 4. Click **End class** at the end. This deletes the room and its data.
 
 If the teacher refreshes the page, or signs in on a different computer with the same Google account, the same room comes back. Students who refresh rejoin automatically.

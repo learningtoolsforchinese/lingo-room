@@ -2,6 +2,7 @@
   "rules": {
     ".read": false,
     ".write": false,
+
     "teachers": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
@@ -10,6 +11,7 @@
         "$other": { ".validate": false }
       }
     },
+
     "rooms": {
       "$pin": {
         ".read": "auth != null && data.child('hostUid').val() === auth.uid",
@@ -34,22 +36,37 @@
         "answers": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($pin).child('players').child($uid).exists()",
-            ".validate": "newData.hasChildren(['text', 'final', 'round'])",
+            ".validate": "newData.hasChildren(['text'])",
             "text": { ".validate": "newData.isString() && newData.val().length <= 200" },
-            "final": { ".validate": "newData.isBoolean()" },
-            "round": { ".validate": "newData.isNumber()" },
             "at": { ".validate": "newData.isNumber()" },
             "$other": { ".validate": false }
           }
         },
 
-        "scores": {
-          "$uid": { ".read": "auth != null && auth.uid === $uid" }
+        "said": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$wordId": {
+              ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($pin).child('players').child($uid).exists()",
+              ".validate": "newData.hasChildren(['text', 'at'])",
+              "text": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200" },
+              "at": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          }
         },
 
-        "rounds": {
-          "$round": {
-            "$uid": { ".read": "auth != null && auth.uid === $uid" }
+        "marks": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$wordId": { ".validate": "newData.isBoolean()" }
+          }
+        },
+
+        "scores": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".validate": "newData.isNumber()"
           }
         }
       }
