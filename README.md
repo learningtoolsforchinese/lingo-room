@@ -18,7 +18,11 @@ Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase 
 - **On the student's phone,** a ✓ shows a celebration: 🎉 *太棒了！Great job!* **+1000**. A ✗ shows a gentle "let's try again! 加油 💪". Students also see their own list of words with the teacher's marks.
 - **Word to say (optional):** the teacher can type a word and click **Show**, or use **Next ▶** with a saved word list. It appears on the board and on every student's phone.
 
-**🔍 Spotlight** shows one student's words in giant text that fills the projector screen, with pinyin, updating live, plus big **✓ Correct / ✗ Incorrect** buttons. Click **🔍 Spotlight** to follow whoever spoke last, or click any student's card to show just that student. Keys: **← →** switch student, **C** marks correct, **X** marks incorrect, **F** turns follow on or off, **Esc** closes.
+**🔍 Spotlight** fills the projector screen and has two views:
+- **☁ Word cloud** (the default) shows every student's words on one screen, like Mentimeter, each with the student's name underneath. New words pop in as students speak. A word several students said grows bigger and shows all their names (e.g. *×4*). The top shows the join link and PIN, and students who are still talking appear at the bottom. Click a word to open that student's view.
+- **👤 One student** shows one student's latest words in giant text with pinyin, plus big **✓ Correct / ✗ Incorrect** buttons. Click a student's card to open it.
+
+Keys: **W** word cloud, **S** one student, **← →** switch student, **C** marks correct, **X** marks incorrect, **F** turns "follow latest speaker" on or off, **Esc** closes. The cloud shows the 80 most recent different words.
 
 Teacher options: mics on/off, pinyin on the board, pinyin for students, Simplified (zh-CN) or Traditional (zh-TW), clear words (keeps scores), reset scores, full screen, end class.
 

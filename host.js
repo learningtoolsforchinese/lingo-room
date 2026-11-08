@@ -277,7 +277,7 @@ function renderCard(id, flash = false) {
   el.querySelector(".list").innerHTML = html || `<li class="item empty-item">No words yet</li>`;
 
   if (flash) { el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 180); }
-  if (id === spotId) renderSpot();
+  if (id === spotId || spotMode === "cloud") renderSpot();
 }
 
 function renderBanner() {
@@ -313,12 +313,14 @@ let spotId = null;         // student shown in the spotlight (null = closed)
 let spotFollow = true;     // jump to whoever spoke last
 let lastSpeaker = null;
 let spotEnteredFs = false;
+let spotMode = "cloud";    // "cloud" = all students' words, "student" = one student
 const spot = $("#spot");
 
 const orderedIds = () => [...players.entries()]
   .sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0)).map(([id]) => id);
 
 function openSpot(id, follow) {
+  spotMode = id ? "student" : "cloud";
   spotFollow = follow;
   spotId = id || lastSpeaker || orderedIds()[0] || "";
   spot.classList.remove("hidden");
@@ -333,9 +335,15 @@ function closeSpot() {
   if (spotEnteredFs && document.fullscreenElement) document.exitFullscreen().catch(() => {});
   spotEnteredFs = false;
 }
+function setSpotMode(mode) {
+  spotMode = mode;
+  if (mode === "student" && !players.has(spotId)) spotId = lastSpeaker || orderedIds()[0] || "";
+  renderSpot();
+}
 function stepSpot(dir) {
   const ids = orderedIds();
   if (!ids.length) return;
+  spotMode = "student";
   spotFollow = false;
   const i = ids.indexOf(spotId);
   spotId = ids[(i + dir + ids.length) % ids.length];
@@ -357,6 +365,13 @@ function fitSize(text) {
 
 function renderSpot() {
   if (spotId === null || spot.classList.contains("hidden")) return;
+  spot.dataset.mode = spotMode;
+  document.querySelectorAll("#spotModeSeg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === spotMode));
+  if (spotMode === "cloud") {
+    spot.classList.remove("correct", "wrong", "offline");
+    renderCloud();
+    return;
+  }
   $("#spotFollow").checked = spotFollow;
   const p = players.get(spotId);
   const liveText = live.get(spotId) || "";
@@ -392,6 +407,140 @@ function renderSpot() {
     `<span class="${m[it.id] === true ? "ok" : m[it.id] === false ? "no" : ""}">${escapeHtml(it.text)}${m[it.id] === true ? " ✓" : m[it.id] === false ? " ✗" : ""}</span>`).join("");
 }
 
+// ── Word cloud: every student's words on one screen ──────────────────
+const CLOUD_MAX = 80;           // show at most this many different words (the most recent ones)
+const seenCloud = new Set();    // words already shown, so only new ones pop in
+let cloudSig = "";
+let cloudFrame = 0;
+
+const cloudKey = (t) => String(t).replace(/[\s\p{P}\p{S}]/gu, "").toLowerCase();
+function colorOf(key) {
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.codePointAt(0)) >>> 0;
+  return h % 6;
+}
+
+/** Group everyone's words: same word from several students → one bigger word with all their names. */
+function cloudWords() {
+  const map = new Map();
+  let latestId = "";
+  for (const [uid, items] of said) {
+    const p = players.get(uid);
+    if (!p) continue;
+    for (const it of items) {
+      const key = cloudKey(it.text);
+      if (!key) continue;
+      let w = map.get(key);
+      if (!w) { w = { key, text: it.text, names: [], uids: [], count: 0, first: it.id, last: it.id }; map.set(key, w); }
+      w.count++;
+      if (!w.uids.includes(uid)) { w.uids.push(uid); w.names.push(p.name); }
+      if (it.id < w.first) { w.first = it.id; w.text = it.text; }
+      if (it.id > w.last) w.last = it.id;
+      if (it.id > latestId) latestId = it.id;
+    }
+  }
+  // keep the most recent words, then lay them out in the order they were first said
+  const words = [...map.values()].sort((a, b) => (a.last < b.last ? 1 : -1)).slice(0, CLOUD_MAX)
+    .sort((a, b) => (a.first < b.first ? -1 : 1));
+  for (const w of words) {
+    w.scale = Math.min(3, 1 + 0.6 * Math.log2(w.count));   // said 1× → 1, 2× → 1.6, 4× → 2.2 …
+    w.latest = w.last === latestId;
+  }
+  return words;
+}
+
+function renderCloud() {
+  $("#cloudPin").textContent = pin;
+  $("#cloudUrl").textContent = $("#joinUrl").textContent;
+  $("#cloudTitle").innerHTML = meta.prompt
+    ? `Say: ${escapeHtml(meta.prompt)}${boardPinyin ? `<span class="py">${escapeHtml(meta.promptPinyin || toPinyin(meta.prompt))}</span>` : ""}`
+    : "What are we saying? 我们在说什么？";
+  const liveNow = [...live.entries()].filter(([id, t]) => t && players.has(id));
+  $("#cloudLive").innerHTML = liveNow.map(([id, t]) =>
+    `<span>🎤 <b>${escapeHtml(players.get(id).name)}</b>: ${escapeHtml(t)}</span>`).join("");
+  // short debounce: many updates arriving together → one layout
+  clearTimeout(cloudFrame);
+  cloudFrame = setTimeout(layoutCloud, 40);
+}
+
+function layoutCloud() {
+  const box = $("#cloud");
+  const words = cloudWords();
+  let total = 0;
+  for (const items of said.values()) total += items.length;
+  $("#cloudStats").textContent = `👤 ${[...players.values()].filter((p) => p.online !== false).length} · 💬 ${total}`;
+
+  const W = box.clientWidth, H = box.clientHeight;
+  const sig = W + "x" + H + "|" + boardPinyin + "|" + words.map((w) => w.key + ":" + w.count + ":" + w.names.join(",") + (w.latest ? "*" : "")).join("|");
+  if (sig === cloudSig) return;
+  cloudSig = sig;
+  if (!words.length) { box.innerHTML = `<div class="cloud-empty">Words will appear here as students speak…</div>`; return; }
+
+  box.innerHTML = words.map((w, i) => {
+    const names = w.names.length > 3 ? `${w.names.slice(0, 3).join(", ")} +${w.names.length - 3}` : w.names.join(", ");
+    const isNew = !seenCloud.has(w.key);
+    return `<div class="cw c${colorOf(w.key)}${isNew ? " new" : ""}${w.latest ? " latest" : ""}" data-i="${i}" title="${escapeHtml(w.names.join(", "))}">
+      <div class="cw-t hanzi">${escapeHtml(w.text)}</div><div class="cw-n">${escapeHtml(names)}${w.count > 1 ? ` · ×${w.count}` : ""}</div></div>`;
+  }).join("");
+  words.forEach((w) => seenCloud.add(w.key));
+  const els = [...box.children];
+
+  // Try a big font first; shrink until every word fits without overlapping.
+  let base = Math.min(H / 4, W / 7);
+  for (let attempt = 0; attempt < 16; attempt++, base *= 0.86) {
+    els.forEach((el, i) => { el.style.fontSize = Math.max(14, base * words[i].scale) + "px"; });
+    const sizes = els.map((el) => [el.offsetWidth, el.offsetHeight]);
+    // Place the biggest words first so they sit in the middle.
+    const order = words.map((_, i) => i).sort((a, b) => words[b].scale - words[a].scale || a - b);
+    const placed = [];
+    const rects = [];
+    let ok = true;
+    for (const i of order) {
+      const spotRect = findCloudSpot(sizes[i][0], sizes[i][1], rects, W, H);
+      if (!spotRect) { ok = false; break; }
+      rects.push(spotRect);
+      placed[i] = spotRect;
+    }
+    if (ok || attempt === 15) {
+      els.forEach((el, i) => {
+        const p = placed[i] || { x: Math.random() * Math.max(0, W - sizes[i][0]), y: Math.random() * Math.max(0, H - sizes[i][1]) };
+        el.style.left = p.x + "px";
+        el.style.top = p.y + "px";
+      });
+      return;
+    }
+  }
+}
+
+/** Walk out from the centre on a spiral until there's a free spot for a w×h box. */
+function findCloudSpot(w, h, placed, W, H) {
+  const pad = Math.max(6, h * 0.08);
+  const cx = W / 2, cy = H / 2, stretch = Math.max(1, (W / H) * 0.9);
+  const maxR = Math.hypot(W, H) / 2;
+  // small steps near the middle, and steps of about 4px further out
+  for (let t = 0, r = 0; r < maxR; t += Math.min(0.3, 4 / Math.max(r, 1)), r = 2.2 * t) {
+    const x = cx + r * Math.cos(t) * stretch - w / 2;
+    const y = cy + r * Math.sin(t) - h / 2;
+    if (x < 0 || y < 0 || x + w > W || y + h > H) continue;
+    if (!placed.some((p) => x < p.x + p.w + pad && x + w + pad > p.x && y < p.y + p.h + pad && y + h + pad > p.y)) {
+      return { x, y, w, h };
+    }
+  }
+  return null;
+}
+
+// Click a word → open that student's view (to mark it ✓ / ✗).
+$("#cloud").onclick = (e) => {
+  const el = e.target.closest(".cw");
+  if (!el) return;
+  const w = cloudWords()[+el.dataset.i];
+  if (w) { spotId = w.uids[0]; spotFollow = false; setSpotMode("student"); }
+};
+$("#spotModeSeg").onclick = (e) => {
+  const m = e.target.closest("button")?.dataset.mode;
+  if (m) setSpotMode(m);
+};
+
 $("#spotBtn").onclick = () => openSpot(null, true);
 $("#spotClose").onclick = closeSpot;
 $("#spotPrev").onclick = () => stepSpot(-1);
@@ -409,6 +558,9 @@ document.addEventListener("keydown", (e) => {
   if (spotId === null) return;
   if (e.target instanceof Element && e.target.closest("input, textarea, select, dialog")) return;
   const k = e.key.toLowerCase();
+  if (k === "w") return setSpotMode("cloud");
+  if (k === "s") return setSpotMode("student");
+  if (spotMode === "cloud" && k !== "escape" && k !== "arrowright" && k !== "arrowleft") return;
   if (k === "escape") closeSpot();
   else if (k === "arrowright") stepSpot(1);
   else if (k === "arrowleft") stepSpot(-1);

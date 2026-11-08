@@ -72,19 +72,34 @@
     </div>
   </div>
 
-  <div class="spot hidden" id="spot">
+  <div class="spot hidden" id="spot" data-mode="cloud">
     <div class="spot-top">
-      <div class="spot-name"><span class="dot"></span><span id="spotName"></span></div>
-      <span class="spot-score" id="spotScore"></span>
-      <div class="spot-prompt hanzi" id="spotPrompt"></div>
+      <div class="seg" id="spotModeSeg">
+        <button data-mode="cloud" title="All students' words (key: W)">☁ Word cloud</button>
+        <button data-mode="student" title="One student at a time (key: S)">👤 One student</button>
+      </div>
+      <!-- word cloud header -->
+      <div class="cloud-join only-cloud">Join at <b id="cloudUrl"></b> · PIN <b id="cloudPin"></b></div>
+      <!-- one-student header -->
+      <div class="spot-name only-student"><span class="dot"></span><span id="spotName"></span></div>
+      <span class="spot-score only-student" id="spotScore"></span>
+      <div class="spot-prompt hanzi only-student" id="spotPrompt"></div>
       <div class="spot-ctl">
-        <label class="toggle" title="Jump to whoever spoke last (key: F)"><input type="checkbox" id="spotFollow"> Follow latest speaker</label>
-        <button class="btn" id="spotPrev" title="Previous student (←)">◀</button>
-        <button class="btn" id="spotNext" title="Next student (→)">▶</button>
+        <span class="cloud-stats only-cloud" id="cloudStats"></span>
+        <label class="toggle only-student" title="Jump to whoever spoke last (key: F)"><input type="checkbox" id="spotFollow"> Follow latest speaker</label>
+        <button class="btn only-student" id="spotPrev" title="Previous student (←)">◀</button>
+        <button class="btn only-student" id="spotNext" title="Next student (→)">▶</button>
         <button class="btn" id="spotClose" title="Close (Esc)">✕</button>
       </div>
     </div>
-    <div class="spot-body">
+
+    <div class="cloud-view only-cloud">
+      <h1 class="cloud-title hanzi" id="cloudTitle"></h1>
+      <div class="cloud" id="cloud"></div>
+      <div class="cloud-live hanzi" id="cloudLive"></div>
+    </div>
+
+    <div class="spot-body only-student">
       <div class="spot-text hanzi" id="spotText"></div>
       <div class="spot-py" id="spotPy"></div>
       <div class="spot-marks hidden" id="spotMarks">
