@@ -5,7 +5,7 @@ import {
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, LANGS, $,
   parseInk, inkSvg, inputsOf, isInkOnly,
-} from "./common.js?v=0.10.0";
+} from "./common.js?v=0.11.0";
 
 const POINTS = 1000; // points for each word the teacher marks correct
 
@@ -30,15 +30,19 @@ function defaultMeta() {
   };
 }
 
-async function resumeOrCreate() {
-  // The teacher's current room is saved on their account, so it also comes back on another computer.
+/** The teacher's class that is still open, if any (saved on their account, so it also works on another computer). */
+async function findOpenRoom() {
   const saved = (await get(ref(db, `teachers/${uid}/room`)).catch(() => null))?.val() || ls.get(LS.pin);
-  if (saved) {
-    try {
-      const s = await get(ref(db, `rooms/${saved}/hostUid`));
-      if (s.val() === uid) return saved;
-    } catch { /* not ours / gone */ }
-  }
+  if (!saved) return null;
+  try {
+    const s = await get(ref(db, `rooms/${saved}/hostUid`));
+    if (s.val() === uid) return saved;
+  } catch { /* not ours / gone */ }
+  return null;
+}
+
+async function resumeOrCreate(existing) {
+  if (existing) return existing;
   for (let i = 0; i < 15; i++) {
     const p = String(Math.floor(100000 + Math.random() * 900000));
     if ((await get(ref(db, `rooms/${p}/meta`))).exists()) continue;
@@ -52,7 +56,35 @@ async function resumeOrCreate() {
   throw new Error("Could not create a room");
 }
 
-const pin = await resumeOrCreate();
+// ── Start screen ─────────────────────────────────────────────────────
+// A signed-in teacher lands here, not on the QR code. The room is only created (or reopened) on click.
+$("#homeName").textContent = (user.displayName || user.email || "teacher").split(" ")[0];
+$("#homeHistory").href = withEmu("history.html");
+$("#homeListening").href = withEmu("listening.html");
+$("#home").classList.remove("hidden");
+
+const openPin = await findOpenRoom();
+if (openPin) {
+  const n = await get(ref(db, `rooms/${openPin}/players`)).then((s) => s.size).catch(() => 0);
+  $("#homeStartTitle").textContent = "Continue your class";
+  $("#homeStartSub").textContent = `Room PIN ${openPin}` + (n ? ` · ${n} student${n === 1 ? "" : "s"} in the room` : "");
+}
+
+const pin = await new Promise((resolve) => {
+  $("#homeStart").onclick = async () => {
+    $("#homeStart").disabled = true;
+    $("#homeErr").textContent = "";
+    try { resolve(await resumeOrCreate(openPin)); }
+    catch (e) {
+      console.error(e);
+      $("#homeErr").textContent = "Couldn't start the class. Check your internet and try again.";
+      $("#homeStart").disabled = false;
+    }
+  };
+});
+$("#home").classList.add("hidden");
+for (const id of ["controls", "mainArea", "countPill", "showJoin", "joinOverlay", "historyLink", "listeningLink"]) $("#" + id).classList.remove("hidden");
+
 const roomRef = ref(db, `rooms/${pin}`);
 const r = (path) => ref(db, `rooms/${pin}/${path}`);
 

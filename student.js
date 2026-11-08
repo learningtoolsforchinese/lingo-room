@@ -1,8 +1,8 @@
 import {
   ref, get, set, push, remove, onValue, onDisconnect, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { boot, withEmu, toPinyin, escapeHtml, $, parseInk, inkSvg, inputsOf, isInkOnly } from "./common.js?v=0.10.0";
-import { createBoard, encodeStrokes } from "./board.js?v=0.10.0";
+import { boot, withEmu, toPinyin, escapeHtml, $, parseInk, inkSvg, inputsOf, isInkOnly } from "./common.js?v=0.11.0";
+import { createBoard, encodeStrokes } from "./board.js?v=0.11.0";
 
 const POINTS = 1000;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

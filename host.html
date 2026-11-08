@@ -5,22 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f4ef">
   <title>Lingo Room · Teacher</title>
-  <link rel="stylesheet" href="style.css?v=0.10.0">
+  <link rel="stylesheet" href="style.css?v=0.11.0">
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 </head>
 <body>
   <header class="host-top">
     <div class="brand">Lingo <span>Room</span></div>
-    <span class="count-pill"><span id="count">0</span> students</span>
-    <div class="join-mini" id="showJoin" title="Show join screen">
+    <span class="count-pill hidden" id="countPill"><span id="count">0</span> students</span>
+    <div class="join-mini hidden" id="showJoin" title="Show join screen">
       <span class="muted">PIN</span><span class="pin" id="pinMini">······</span>
     </div>
-    <a class="btn ghost" id="historyLink" href="history.html" target="_blank" title="Past classes and scores">📚 History</a>
-    <a class="btn ghost" id="listeningLink" href="listening.html" target="_blank" title="Make a listening audio (MP3) for a test">🎧 Listening</a>
+    <a class="btn ghost hidden" id="historyLink" href="history.html" target="_blank" title="Past classes and scores">📚 History</a>
+    <a class="btn ghost hidden" id="listeningLink" href="listening.html" target="_blank" title="Make a listening audio (MP3) for a test">🎧 Listening</a>
     <div class="me hidden" id="me"><img alt="" referrerpolicy="no-referrer"><span></span><button class="btn ghost">Sign out</button></div>
   </header>
 
-  <section class="host-controls">
+  <!-- Start screen: shown to a signed-in teacher before any room exists -->
+  <section class="home hidden" id="home">
+    <div class="home-inner">
+      <h1 class="home-hi">Welcome, <span id="homeName">teacher</span> 👋</h1>
+      <p class="muted home-sub">What would you like to do?</p>
+
+      <button class="home-main" id="homeStart">
+        <span class="hm-icon">▶</span>
+        <span class="hm-text"><b id="homeStartTitle">Start a class</b><span id="homeStartSub">Create a room for your students</span></span>
+      </button>
+
+      <div class="home-cards">
+        <a class="home-card" id="homeHistory" href="history.html"><span class="hc-icon">📚</span><b>Class history</b><span class="muted">Past classes, scores and words</span></a>
+        <a class="home-card" id="homeListening" href="listening.html"><span class="hc-icon">🎧</span><b>Listening maker</b><span class="muted">Make listening test audio (MP3)</span></a>
+      </div>
+      <div class="err" id="homeErr"></div>
+    </div>
+  </section>
+
+  <section class="host-controls hidden" id="controls">
     <div class="ctl-group">
       <input id="promptInput" class="prompt-input hanzi" placeholder="Word or question (optional)" maxlength="40">
       <button class="btn primary" id="showPrompt" title="Show this word on students' phones">Show</button>
@@ -56,7 +75,7 @@
     </div>
   </section>
 
-  <main class="host-main">
+  <main class="host-main hidden" id="mainArea">
     <div class="prompt-banner hidden" id="banner">
       <div>
         <div class="lbl" id="bLbl">Answer this</div>
@@ -71,7 +90,7 @@
     </aside>
   </main>
 
-  <div class="join-overlay" id="joinOverlay">
+  <div class="join-overlay hidden" id="joinOverlay">
     <div class="join-card">
       <div class="muted">Go to</div>
       <div class="url" id="joinUrl">…</div>
@@ -144,6 +163,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="host.js?v=0.10.0"></script>
+  <script type="module" src="host.js?v=0.11.0"></script>
 </body>
 </html>

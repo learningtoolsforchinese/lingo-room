@@ -468,3 +468,31 @@ dialog textarea { width: 100%; min-height: 200px; font-size: 18px; }
 .ls-guide { width: 100%; border-collapse: collapse; font-size: 14px; }
 .ls-guide td { padding: 6px 4px; vertical-align: top; border-bottom: 1px solid var(--soft); }
 .ls-guide td:first-child { white-space: nowrap; padding-right: 10px; }
+
+/* ═════════════════ START SCREEN (teacher) ═════════════════ */
+.home { display: flex; justify-content: center; padding: 48px 20px 60px; }
+.home-inner { width: 100%; max-width: 640px; }
+.home-hi { font-size: clamp(26px, 5vw, 36px); margin: 0 0 4px; }
+.home-sub { margin: 0 0 22px; font-size: 18px; }
+.home-main {
+  display: flex; align-items: center; gap: 18px; width: 100%; text-align: left; padding: 22px 24px;
+  background: var(--red); color: #fff; border: 0; border-radius: 20px; box-shadow: 0 10px 26px rgba(214, 59, 48, .28);
+  transition: transform .1s, background .15s;
+}
+.home-main:hover { background: var(--red2); }
+.home-main:active { transform: scale(.99); }
+.home-main:disabled { opacity: .6; cursor: wait; }
+.hm-icon { font-size: 34px; width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, .2); display: grid; place-items: center; flex: none; padding-left: 4px; }
+.hm-text { display: flex; flex-direction: column; gap: 2px; }
+.hm-text b { font-size: 24px; }
+.hm-text span { opacity: .9; font-size: 16px; }
+.home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+@media (max-width: 520px) { .home-cards { grid-template-columns: 1fr; } .home-main { padding: 18px; } }
+.home-card {
+  display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; text-decoration: none; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  transition: transform .1s, border-color .15s;
+}
+.home-card:hover { border-color: #d6cabb; transform: translateY(-1px); }
+.home-card .hc-icon { font-size: 28px; }
+.home-card b { font-size: 18px; }

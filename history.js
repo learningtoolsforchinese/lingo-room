@@ -3,7 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, parseInk, inkSvg, isInkOnly, $,
-} from "./common.js?v=0.10.0";
+} from "./common.js?v=0.11.0";
 
 const { auth, db } = await bootTeacher();
 const user = await requireTeacher(auth);

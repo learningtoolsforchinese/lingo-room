@@ -97,7 +97,7 @@ Without this step, students get an error when they join.
 
 ## In class
 
-1. Open `host.html` on the projector and **sign in with Google**. The room is created automatically and the PIN and QR code appear.
+1. Open `host.html` and **sign in with Google**. You land on the **start screen**: **▶ Start a class**, **📚 Class history** or **🎧 Listening maker**. Click **Start a class** and the room is created, with the PIN and QR code for the projector. If a class is still open (for example you refreshed the page), the button says **Continue your class** with its PIN and how many students are in it.
 2. Students scan the QR code or open the site and type the PIN, then enter their name.
 3. Click **Start ▶**. Students speak, their words appear on their cards, and you mark each one ✓ or ✗. Use **🔍 Spotlight** to show one student full screen.
 4. Click **End class** at the end. Give the class a name, and it's saved to **📚 History**. Then the room closes for students.
@@ -135,7 +135,7 @@ Then open `http://localhost:8080/host.html?emu=1` (the emulator shows a test Goo
 Before pushing, stamp the new version on the file links so browsers load the fresh files:
 
 ```bash
-sh scripts/set-version.sh 0.10.0
+sh scripts/set-version.sh 0.11.0
 ```
 
 ## Files

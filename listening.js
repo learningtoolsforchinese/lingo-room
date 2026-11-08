@@ -1,8 +1,8 @@
 import {
   ref, set, remove, onValue, query, orderByChild, push, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, $ } from "./common.js?v=0.10.0";
-import { VOICES, SOUNDS, parseScript, makeAudio, encodeMp3 } from "./tts.js?v=0.10.0";
+import { bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, $ } from "./common.js?v=0.11.0";
+import { VOICES, SOUNDS, parseScript, makeAudio, encodeMp3 } from "./tts.js?v=0.11.0";
 
 const { auth, db } = await bootTeacher();
 const user = await requireTeacher(auth);

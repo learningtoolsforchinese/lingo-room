@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { pinyin } from "https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/+esm";
-import { firebaseConfig } from "./firebase-config.js?v=0.10.0";
+import { firebaseConfig } from "./firebase-config.js?v=0.11.0";
 
 const params = new URLSearchParams(location.search);
 
