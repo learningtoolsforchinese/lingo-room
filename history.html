@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f4ef">
+  <title>Lingo Room · History</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="host-top">
+    <div class="brand">Lingo <span>Room</span></div>
+    <span class="count-pill">📚 Class history</span>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="btn ghost" id="backToClass" href="host.html">← Back to class</a>
+      <div class="me hidden" id="me"><img alt="" referrerpolicy="no-referrer"><span></span><button class="btn ghost">Sign out</button></div>
+    </div>
+  </header>
+
+  <main class="hist-main">
+    <!-- List of classes -->
+    <section id="listView">
+      <h1 class="hist-h1">Your classes</h1>
+      <div id="classList" class="hist-list"><div class="muted">Loading…</div></div>
+    </section>
+
+    <!-- One class -->
+    <section id="detailView" class="hidden">
+      <div class="hist-bar">
+        <button class="btn" id="backToList">← All classes</button>
+        <div class="grow"></div>
+        <button class="btn" id="csvScores" title="Download scores for Excel / Google Sheets">⬇ Scores (CSV)</button>
+        <button class="btn" id="csvWords" title="Download every word for Excel / Google Sheets">⬇ All words (CSV)</button>
+        <button class="btn ghost" id="renameClass">✎ Rename</button>
+        <button class="btn ghost" id="deleteClass">🗑 Delete</button>
+      </div>
+      <h1 class="hist-h1 hanzi" id="dName"></h1>
+      <div class="muted" id="dMeta"></div>
+
+      <div class="hist-grid">
+        <div class="board-panel hist-board">
+          <h3>🏆 Final scores</h3>
+          <table class="hist-table">
+            <thead><tr><th></th><th>Student</th><th>Score</th><th>✓</th><th>✗</th><th>Words</th></tr></thead>
+            <tbody id="dScores"></tbody>
+          </table>
+        </div>
+        <div id="dStudents" class="hist-students"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="history.js"></script>
+</body>
+</html>

@@ -26,6 +26,8 @@ Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase 
 
 Keys: **W** word cloud, **S** one student, **← →** switch student, **C** marks correct, **X** marks incorrect, **F** turns "follow latest speaker" on or off, **Esc** closes. The cloud shows the 80 most recent different words.
 
+**📚 Class history.** **End class** asks for a class name (prefilled with the date and time) and saves the class before closing the room: every student's final score, ✓/✗ counts, and every word they said, with handwriting and your marks. Open **📚 History** from the teacher page to see past classes, open one for the full leaderboard and each student's words, **download CSV** files (scores, or every word) for Excel or Google Sheets, rename a class, or delete it. History is saved on your Google account, so it's there on any computer, and only you can see it.
+
 Teacher options: answers on/off, pinyin on the board, pinyin for students, Simplified (zh-CN) or Traditional (zh-TW), clear words (keeps scores), reset scores, full screen, end class.
 
 ---
@@ -69,7 +71,7 @@ Without this step, students get an error when they join.
 1. Open `host.html` on the projector and **sign in with Google**. The room is created automatically and the PIN and QR code appear.
 2. Students scan the QR code or open the site and type the PIN, then enter their name.
 3. Click **Start ▶**. Students speak, their words appear on their cards, and you mark each one ✓ or ✗. Use **🔍 Spotlight** to show one student full screen.
-4. Click **End class** at the end. This deletes the room and its data.
+4. Click **End class** at the end. Give the class a name, and it's saved to **📚 History**. Then the room closes for students.
 
 If the teacher refreshes the page, or signs in on a different computer with the same Google account, the same room comes back. Students who refresh rejoin automatically.
 
@@ -104,6 +106,7 @@ Then open `http://localhost:8080/host.html?emu=1` (the emulator shows a test Goo
 |---|---|
 | `index.html`, `student.js` | Student page |
 | `host.html`, `host.js` | Teacher page |
+| `history.html`, `history.js` | Class history page |
 | `common.js` | Firebase setup, pinyin, drawing handwriting |
 | `board.js` | Handwriting board and recognition |
 | `style.css` | Styles |

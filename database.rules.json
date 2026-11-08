@@ -8,6 +8,23 @@
         ".read": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
         ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
         "room": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6}$/)" },
+        "classes": {
+          ".indexOn": ["endedAt"],
+          "$classId": {
+            ".validate": "newData.hasChildren(['name', 'endedAt'])",
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80" },
+            "endedAt": { ".validate": "newData.isNumber()" },
+            "startedAt": { ".validate": "newData.isNumber()" },
+            "pin": { ".validate": "newData.isString()" },
+            "students": { ".validate": "newData.isNumber()" },
+            "words": { ".validate": "newData.isNumber()" },
+            "top": { ".validate": "newData.hasChildren()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "classDetails": {
+          "$classId": { ".validate": true }
+        },
         "$other": { ".validate": false }
       }
     },

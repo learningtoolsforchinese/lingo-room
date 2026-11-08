@@ -368,3 +368,40 @@ dialog textarea { width: 100%; min-height: 200px; font-size: 18px; }
 .mine .inks { display: flex; gap: 3px; }
 .w-text, .w-cands { scrollbar-width: none; }
 .w-text::-webkit-scrollbar, .w-cands::-webkit-scrollbar { display: none; }
+
+/* ═════════════════ HISTORY ═════════════════ */
+.hist-main { max-width: 1200px; margin: 0 auto; padding: 18px 20px 48px; }
+.hist-h1 { font-size: 28px; margin: 6px 0 4px; }
+.hist-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.hist-item {
+  display: flex; align-items: center; gap: 18px; text-align: left; width: 100%; padding: 14px 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.hist-item:hover { border-color: #d6cabb; }
+.hi-main { flex: 1; min-width: 0; }
+.hi-name { font-size: 18px; font-weight: 800; }
+.hi-stats { display: flex; gap: 12px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.hi-top { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; min-width: 200px; font-size: 14px; }
+.hi-top b { color: var(--py); }
+@media (max-width: 700px) { .hist-item { flex-wrap: wrap; } .hi-top { justify-content: flex-start; } }
+.hist-empty { text-align: center; padding: 50px 20px; font-size: 18px; line-height: 1.7; }
+.hist-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.hist-bar .grow { flex: 1; }
+.hist-grid { display: grid; grid-template-columns: 360px 1fr; gap: 18px; margin-top: 16px; align-items: start; }
+@media (max-width: 900px) { .hist-grid { grid-template-columns: 1fr; } }
+.hist-board { position: sticky; top: 12px; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.hist-table th { text-align: left; color: var(--muted); font-weight: 600; font-size: 13px; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.hist-table td { padding: 7px 6px; border-bottom: 1px solid var(--soft); }
+.hist-table td a { color: var(--text); text-decoration: none; font-weight: 600; }
+.hist-table td a:hover { text-decoration: underline; }
+.hist-table .ok { color: var(--green); font-weight: 700; }
+.hist-table .no { color: var(--bad); font-weight: 700; }
+.hist-table .rank { width: 30px; text-align: center; }
+.hist-students { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.hist-student { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; scroll-margin-top: 12px; }
+.hist-student .list { max-height: none; }
+.hist-student .item:first-child .it-text { font-size: 24px; }
+.hist-mark { font-weight: 900; font-size: 20px; width: 24px; text-align: center; }
+.item.ok .hist-mark { color: var(--green); }
+.item.no .hist-mark { color: var(--bad); }

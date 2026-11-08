@@ -1,9 +1,9 @@
 import {
-  ref, get, set, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved,
+  ref, get, set, update, remove, push, onValue, onChildAdded, onChildChanged, onChildRemoved,
   serverTimestamp, increment,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  bootTeacher, isTeacher, signInTeacher, signOutTeacher, withEmu, escapeHtml, toPinyin, LANGS, $,
+  bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, LANGS, $,
   parseInk, inkSvg, inputsOf,
 } from "./common.js";
 
@@ -18,44 +18,9 @@ const ls = {
 
 // ── Teacher sign-in (Google) ─────────────────────────────────────────
 const { auth, db } = await bootTeacher();
-
-function waitForSignIn() {
-  return new Promise((resolve) => {
-    $("#signIn").classList.remove("hidden");
-    $("#studentLink").href = withEmu("./");
-    $("#googleBtn").onclick = async () => {
-      $("#signInErr").textContent = "";
-      $("#googleBtn").disabled = true;
-      try {
-        const user = await signInTeacher(auth);
-        if (user) { $("#signIn").classList.add("hidden"); resolve(user); }
-      } catch (e) {
-        console.error(e);
-        $("#signInErr").textContent = e.code === "auth/popup-closed-by-user"
-          ? "Sign-in was cancelled."
-          : e.code === "auth/unauthorized-domain"
-            ? "This website isn't allowed yet. Add it in Firebase → Authentication → Settings → Authorized domains."
-            : "Could not sign in. Please try again.";
-      } finally { $("#googleBtn").disabled = false; }
-    };
-  });
-}
-
-const user = isTeacher(auth.currentUser) ? auth.currentUser : await waitForSignIn();
+const user = await requireTeacher(auth);
 const uid = user.uid;
-{
-  const meEl = $("#me");
-  meEl.classList.remove("hidden");
-  meEl.querySelector("span").textContent = user.displayName || user.email || "Teacher";
-  meEl.title = user.email || "";
-  const img = meEl.querySelector("img");
-  if (user.photoURL) img.src = user.photoURL; else img.remove();
-  meEl.querySelector("button").onclick = async () => {
-    if (!confirm("Sign out? The room stays open. Sign in again to get back to it.")) return;
-    await signOutTeacher(auth);
-    location.reload();
-  };
-}
+showTeacherChip(auth, user, $("#me"));
 
 // ── Room: resume the teacher's last room, or create a new one ──────────
 function defaultMeta() {
@@ -185,17 +150,73 @@ $("#fullscreen").onclick = () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.();
 };
-$("#endRoom").onclick = async () => {
-  if (!confirm("End this class? The room and all words will be deleted.")) return;
-  await remove(roomRef);
-  await remove(ref(db, `teachers/${uid}/room`)).catch(() => {});
-  ls.del(LS.pin);
-  document.body.innerHTML = `
-    <div class="stu"><div class="stu-center" style="text-align:center">
-      <h1>Class ended 再见！</h1>
-      <p class="muted">The room was deleted.</p>
-      <button class="btn primary wide" onclick="location.reload()">Start a new class</button>
-    </div></div>`;
+$("#historyLink").href = withEmu("history.html");
+
+// ── End class: save to history, then close the room ──────────────────
+function defaultClassName() {
+  const d = new Date();
+  return "Class · " + d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Everything worth keeping about this class, from what the teacher's screen already has. */
+function classSnapshot(name) {
+  const students = {};
+  let words = 0;
+  for (const [id, p] of players) {
+    const m = marks.get(id) || {};
+    const list = {};
+    let correct = 0, incorrect = 0;
+    for (const it of said.get(id) || []) {
+      const w = { text: it.text };
+      if (it.ink?.length) w.ink = JSON.stringify(it.ink);
+      if (m[it.id] === true) { w.mark = true; correct++; }
+      if (m[it.id] === false) { w.mark = false; incorrect++; }
+      list[it.id] = w;
+      words++;
+    }
+    students[id] = { name: p.name, score: scores[id] || 0, correct, incorrect, words: list };
+  }
+  const ranked = Object.values(students).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  const summary = {
+    name: name.slice(0, 80), pin,
+    startedAt: typeof meta.createdAt === "number" ? meta.createdAt : Date.now(),
+    endedAt: serverTimestamp(),
+    students: ranked.length, words,
+    top: ranked.filter((s) => s.score > 0).slice(0, 3).map((s) => ({ name: s.name, score: s.score })),
+  };
+  return { summary, detail: { students } };
+}
+
+$("#endRoom").onclick = () => {
+  $("#className").value = defaultClassName();
+  $("#endErr").textContent = "";
+  $("#endDlg").showModal();
+  $("#className").select();
+};
+$("#endCancel").onclick = () => $("#endDlg").close();
+$("#endConfirm").onclick = async () => {
+  const btn = $("#endConfirm");
+  btn.disabled = true;
+  try {
+    const name = $("#className").value.trim() || defaultClassName();
+    const { summary, detail } = classSnapshot(name);
+    const classId = push(ref(db, `teachers/${uid}/classes`)).key;
+    await update(ref(db, `teachers/${uid}`), { [`classes/${classId}`]: summary, [`classDetails/${classId}`]: detail, room: null });
+    await remove(roomRef);
+    ls.del(LS.pin);
+    $("#endDlg").close();
+    document.body.innerHTML = `
+      <div class="stu"><div class="stu-center" style="text-align:center">
+        <h1>Class ended 再见！</h1>
+        <p class="muted">“${escapeHtml(name)}” was saved to your history.</p>
+        <a class="btn wide" style="text-align:center;text-decoration:none" href="${withEmu("history.html")}#${classId}">📚 View this class in History</a>
+        <button class="btn primary wide" onclick="location.reload()">Start a new class</button>
+      </div></div>`;
+  } catch (e) {
+    console.error(e);
+    $("#endErr").textContent = "Couldn't save the class. Check your internet and try again.";
+  } finally { btn.disabled = false; }
 };
 
 function renderControls() {
