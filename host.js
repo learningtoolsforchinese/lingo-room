@@ -4,8 +4,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, LANGS, $,
-  parseInk, inkSvg, inputsOf,
-} from "./common.js?v=0.8.0";
+  parseInk, inkSvg, inputsOf, isInkOnly,
+} from "./common.js?v=0.9.0";
 
 const POINTS = 1000; // points for each word the teacher marks correct
 
@@ -299,12 +299,14 @@ function renderCard(id, flash = false) {
   el.classList.toggle("speaking", !!liveText);
 
   let html = liveText
-    ? `<li class="item live"><div class="it-main"><div class="it-text hanzi">${escapeHtml(liveText)}</div>${pyHtml(liveText)}</div><span class="typing">●●●</span></li>`
+    ? `<li class="item live"><div class="it-main"><div class="it-text hanzi">${liveText === "✍" ? "✍️ writing…" : escapeHtml(liveText)}</div>${liveText === "✍" ? "" : pyHtml(liveText)}</div><span class="typing">●●●</span></li>`
     : "";
   html += items.map((it) => {
     const st = m[it.id];
     return `<li class="item ${st === true ? "ok" : st === false ? "no" : ""}" data-uid="${escapeHtml(id)}" data-id="${escapeHtml(it.id)}">
-      <div class="it-main">${it.ink.length ? `<div class="it-ink">${inkSvg(it.ink, 52)}</div>` : ""}<div class="it-text hanzi">${escapeHtml(it.text)}</div>${pyHtml(it.text)}</div>
+      <div class="it-main">${isInkOnly(it)
+        ? `<div class="it-ink">${inkSvg(it.ink, 120)}</div>`
+        : `${it.ink.length ? `<div class="it-ink">${inkSvg(it.ink, 52)}</div>` : ""}<div class="it-text hanzi">${escapeHtml(it.text)}</div>${pyHtml(it.text)}`}</div>
       <div class="it-btns"><button class="mk ok" data-v="1" title="Correct (+${POINTS})">✓</button><button class="mk no" data-v="0" title="Incorrect">✗</button></div>
     </li>`;
   }).join("");
@@ -424,15 +426,17 @@ function renderSpot() {
   spot.classList.toggle("wrong", st === false);
 
   const ink = !liveText && latest?.ink?.length ? latest.ink : [];
-  const inkPx = ink.length ? Math.floor(Math.min(window.innerHeight * 0.42, (window.innerWidth * 0.86) / ink.length - 20)) : 0;
+  const inkOnly = !liveText && isInkOnly(latest);
+  const inkPx = ink.length ? Math.floor(Math.min(window.innerHeight * (inkOnly ? 0.6 : 0.42), (window.innerWidth * 0.86) / ink.length - 20)) : 0;
   $("#spotInk").innerHTML = ink.length ? inkSvg(ink, inkPx) : "";
   const tEl = $("#spotText");
-  tEl.textContent = text || "…";
-  // with handwriting, the recognised text is a smaller caption under the drawing
-  tEl.style.fontSize = (ink.length ? Math.min(fitSize(text), window.innerHeight * 0.1) : fitSize(text || "……")) + "px";
+  tEl.classList.toggle("hidden", inkOnly);
+  tEl.textContent = liveText === "✍" ? "✍️ writing…" : text || "…";
+  // with handwriting, any text is a smaller caption under the drawing
+  tEl.style.fontSize = (ink.length ? Math.min(fitSize(text), window.innerHeight * 0.1) : fitSize(tEl.textContent || "……")) + "px";
   tEl.classList.toggle("interim", !!liveText);
   tEl.classList.toggle("waiting", !text);
-  $("#spotPy").textContent = boardPinyin && text ? toPinyin(text) : "";
+  $("#spotPy").textContent = boardPinyin && text && !inkOnly && liveText !== "✍" ? toPinyin(text) : "";
 
   const marksEl = $("#spotMarks");
   marksEl.classList.toggle("hidden", !(!liveText && latest));
@@ -443,7 +447,7 @@ function renderSpot() {
 
   const earlier = items.slice(liveText ? 0 : 1, 6);
   $("#spotPrevList").innerHTML = earlier.map((it) =>
-    `<span class="${m[it.id] === true ? "ok" : m[it.id] === false ? "no" : ""}">${escapeHtml(it.text)}${m[it.id] === true ? " ✓" : m[it.id] === false ? " ✗" : ""}</span>`).join("");
+    `<span class="${m[it.id] === true ? "ok" : m[it.id] === false ? "no" : ""}">${isInkOnly(it) ? inkSvg(it.ink, 34, "ink ink-chip") : escapeHtml(it.text)}${m[it.id] === true ? " ✓" : m[it.id] === false ? " ✗" : ""}</span>`).join("");
 }
 
 // ── Word cloud: every student's words on one screen ──────────────────
@@ -467,10 +471,11 @@ function cloudWords() {
     const p = players.get(uid);
     if (!p) continue;
     for (const it of items) {
-      const key = cloudKey(it.text);
+      const inkOnly = isInkOnly(it);
+      const key = inkOnly ? "ink:" + it.id : cloudKey(it.text);   // every drawing stays separate
       if (!key) continue;
       let w = map.get(key);
-      if (!w) { w = { key, text: it.text, names: [], uids: [], count: 0, first: it.id, last: it.id }; map.set(key, w); }
+      if (!w) { w = { key, text: it.text, ink: inkOnly ? it.ink : null, names: [], uids: [], count: 0, first: it.id, last: it.id }; map.set(key, w); }
       w.count++;
       if (!w.uids.includes(uid)) { w.uids.push(uid); w.names.push(p.name); }
       if (it.id < w.first) { w.first = it.id; w.text = it.text; }
@@ -519,7 +524,7 @@ function layoutCloud() {
     const names = w.names.length > 3 ? `${w.names.slice(0, 3).join(", ")} +${w.names.length - 3}` : w.names.join(", ");
     const isNew = !seenCloud.has(w.key);
     return `<div class="cw c${colorOf(w.key)}${isNew ? " new" : ""}${w.latest ? " latest" : ""}" data-i="${i}" title="${escapeHtml(w.names.join(", "))}">
-      <div class="cw-t hanzi">${escapeHtml(w.text)}</div><div class="cw-n">${escapeHtml(names)}${w.count > 1 ? ` · ×${w.count}` : ""}</div></div>`;
+      <div class="cw-t hanzi">${w.ink ? inkSvg(w.ink, 0, "ink cw-ink") : escapeHtml(w.text)}</div><div class="cw-n">${escapeHtml(names)}${w.count > 1 ? ` · ×${w.count}` : ""}</div></div>`;
   }).join("");
   words.forEach((w) => seenCloud.add(w.key));
   const els = [...box.children];

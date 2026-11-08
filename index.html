@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f4ef">
   <title>Lingo Room</title>
-  <link rel="stylesheet" href="style.css?v=0.8.0">
+  <link rel="stylesheet" href="style.css?v=0.9.0">
 </head>
 <body>
   <div class="stu">
@@ -76,17 +76,12 @@
 
       <!-- Write (handwriting board) -->
       <div class="pane hidden" id="paneWrite">
-        <div class="w-answer">
-          <div class="w-text hanzi" id="wText"><span class="muted">Write a character below ✍️</span></div>
-          <button class="btn" id="wBack" title="Delete last character">⌫</button>
-          <button class="btn primary" id="wSend">Send</button>
-        </div>
-        <div class="w-cands hanzi" id="wCands"></div>
         <div class="w-board">
           <canvas id="wCanvas"></canvas>
           <button class="w-tool left" id="wUndo" title="Undo last stroke">↶</button>
           <button class="w-tool right" id="wClear" title="Clear">✕</button>
         </div>
+        <button class="btn primary wide w-send" id="wSend">Send ✍️</button>
       </div>
 
       <div class="feedback" id="feedback"></div>
@@ -115,6 +110,6 @@
   </div>
   <div class="toast hidden" id="toast"></div>
 
-  <script type="module" src="student.js?v=0.8.0"></script>
+  <script type="module" src="student.js?v=0.9.0"></script>
 </body>
 </html>

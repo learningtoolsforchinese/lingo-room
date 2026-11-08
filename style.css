@@ -409,3 +409,11 @@ dialog textarea { width: 100%; min-height: 200px; font-size: 18px; }
 /* Teacher: Answer by (one at a time) */
 .answer-seg button { padding: 6px 12px; font-size: 14px; }
 .answer-seg button.on { background: var(--red); color: #fff; box-shadow: none; }
+
+/* Write mode: draw and send */
+.w-send { margin-top: 12px; max-width: 380px; display: block; margin-left: auto; margin-right: auto; }
+.cw-ink { width: 1.25em; height: 1.25em; vertical-align: middle; border-radius: .12em; }
+.cw-ink .ink-grid { stroke-width: 2; }
+.ink-chip { vertical-align: middle; border-radius: 6px; }
+.mine li .t .ink { width: 64px; height: 64px; }
+.yay .word .ink { border-radius: 14px; }

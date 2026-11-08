@@ -2,8 +2,8 @@ import {
   ref, get, update, onValue, query, orderByChild,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, parseInk, inkSvg, $,
-} from "./common.js?v=0.8.0";
+  bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, parseInk, inkSvg, isInkOnly, $,
+} from "./common.js?v=0.9.0";
 
 const { auth, db } = await bootTeacher();
 const user = await requireTeacher(auth);
@@ -103,9 +103,10 @@ function renderDetail() {
       <div class="card-head"><span class="nm hanzi">${escapeHtml(s.name)}</span><span class="score">${s.score ? `⭐ ${s.score}` : ""}</span></div>
       <ul class="list">${s.list.length ? s.list.map((w) => {
         const ink = parseInk(w.ink);
+        const inkOnly = isInkOnly({ ink, text: w.text });
         return `<li class="item ${w.mark === true ? "ok" : w.mark === false ? "no" : ""}">
-          <div class="it-main">${ink.length ? `<div class="it-ink">${inkSvg(ink, 44)}</div>` : ""}
-            <div class="it-text hanzi">${escapeHtml(w.text)}</div><div class="it-py">${escapeHtml(toPinyin(w.text))}</div></div>
+          <div class="it-main">${inkOnly ? `<div class="it-ink">${inkSvg(ink, 110)}</div>` : `${ink.length ? `<div class="it-ink">${inkSvg(ink, 44)}</div>` : ""}
+            <div class="it-text hanzi">${escapeHtml(w.text)}</div><div class="it-py">${escapeHtml(toPinyin(w.text))}</div>`}</div>
           <span class="hist-mark">${w.mark === true ? "✓" : w.mark === false ? "✗" : ""}</span></li>`;
       }).join("") : `<li class="item empty-item">No words</li>`}</ul>
     </div>`).join("");
@@ -150,7 +151,8 @@ $("#csvWords").onclick = () => {
   const rows = [["Student", "Word", "Pinyin", "Mark", "Handwritten"]];
   for (const s of rankedStudents()) {
     for (const w of s.list) {
-      rows.push([s.name, w.text, toPinyin(w.text), w.mark === true ? "correct" : w.mark === false ? "incorrect" : "", w.ink ? "yes" : ""]);
+      const drawn = w.text === "✍" && w.ink;
+      rows.push([s.name, drawn ? "(handwriting)" : w.text, drawn ? "" : toPinyin(w.text), w.mark === true ? "correct" : w.mark === false ? "incorrect" : "", w.ink ? "yes" : ""]);
     }
   }
   downloadCsv(`${safeName()} - words.csv`, rows);

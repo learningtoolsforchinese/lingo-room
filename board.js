@@ -1,6 +1,4 @@
-// Handwriting board: draw one character, get suggestions, keep the strokes.
-
-const RECOGNIZE_URL = "https://inputtools.google.com/request?ime=handwriting&app=mobilesearch&cs=1&oe=UTF-8";
+// Handwriting board: the student draws, and the strokes are sent exactly as drawn.
 
 /**
  * Turn a <canvas> into a drawing pad.
@@ -98,32 +96,6 @@ export function createBoard(canvas, onChange) {
     clear() { strokes = []; cur = null; redraw(); onChange?.(); },
     resize,
   };
-}
-
-/**
- * Ask the handwriting service which characters the strokes look like.
- * Returns a list of suggestions (best first).
- */
-export async function recognize(strokes, width, height, lang = "zh-CN") {
-  const ink = strokes.map((s) => [s.map((p) => Math.round(p[0])), s.map((p) => Math.round(p[1])), []]);
-  const language = { "zh-CN": "zh_CN", "zh-TW": "zh_TW", "zh-HK": "zh_HK" }[lang] || lang.replace("-", "_");
-  const res = await fetch(RECOGNIZE_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      options: "enable_pre_space",
-      requests: [{
-        writing_guide: { writing_area_width: Math.round(width), writing_area_height: Math.round(height) },
-        pre_context: "", max_num_results: 10, max_completions: 0, language, ink,
-      }],
-    }),
-  });
-  const data = await res.json();
-  if (data[0] !== "SUCCESS") throw new Error("Handwriting service error");
-  let list = data[1]?.[0]?.[1] || [];
-  // For Chinese, only keep suggestions made of Chinese characters.
-  if (lang.startsWith("zh")) list = list.filter((c) => /^\p{Script=Han}+$/u.test(c));
-  return [...new Set(list)].slice(0, 8);
 }
 
 /**

@@ -1,8 +1,8 @@
 import {
   ref, get, set, push, remove, onValue, onDisconnect, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { boot, withEmu, toPinyin, escapeHtml, $, parseInk, inkSvg, inputsOf } from "./common.js?v=0.8.0";
-import { createBoard, recognize, encodeStrokes } from "./board.js?v=0.8.0";
+import { boot, withEmu, toPinyin, escapeHtml, $, parseInk, inkSvg, inputsOf, isInkOnly } from "./common.js?v=0.9.0";
+import { createBoard, encodeStrokes } from "./board.js?v=0.9.0";
 
 const POINTS = 1000;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -118,8 +118,8 @@ function enterRoom(name) {
     if (marksLoaded) {
       // Only react to marks the teacher just made, not ones from before a refresh.
       for (const [id, val] of Object.entries(next)) {
-        if (val === true && myMarks[id] !== true) celebrate(textOf(id));
-        else if (val === false && myMarks[id] !== false) tryAgain(textOf(id));
+        if (val === true && myMarks[id] !== true) celebrate(wordOf(id));
+        else if (val === false && myMarks[id] !== false) tryAgain(wordOf(id));
       }
     }
     myMarks = next;
@@ -129,6 +129,7 @@ function enterRoom(name) {
 }
 
 const textOf = (id) => myWords.find((w) => w.id === id)?.text || "";
+const wordOf = (id) => myWords.find((w) => w.id === id);
 
 function finish(title, msg, canRejoin = false) {
   if (ended) return;
@@ -198,7 +199,8 @@ function renderMine() {
     ? myWords.map((w) => {
         const st = myMarks[w.id];
         return `<li class="${st === true ? "ok" : st === false ? "no" : ""}">
-          ${w.ink.length ? `<span class="inks">${inkSvg(w.ink, 30)}</span>` : ""}<span class="t">${escapeHtml(w.text)}</span>
+          ${isInkOnly(w) ? `<span class="t">${inkSvg(w.ink, 64)}</span>`
+            : `${w.ink.length ? `<span class="inks">${inkSvg(w.ink, 30)}</span>` : ""}<span class="t">${escapeHtml(w.text)}</span>`}
           <span class="m">${st === true ? `✓ +${POINTS}` : st === false ? "✗ Try again" : ""}</span></li>`;
       }).join("")
     : `<li class="none">Your words will appear here</li>`;
@@ -216,9 +218,9 @@ function setFeedback(text, kind = "") {
 
 // ── Celebrate / encourage ────────────────────────────────────────────
 let yayTimer = null;
-function celebrate(text) {
+function celebrate(word) {
   const yay = $("#yay");
-  $("#yayWord").textContent = text;
+  $("#yayWord").innerHTML = isInkOnly(word) ? inkSvg(word.ink, 120) : escapeHtml(word?.text || "");
   yay.querySelectorAll(".confetti").forEach((c) => c.remove());
   const bits = ["🎉", "⭐", "✨", "🎊", "💯", "🌟"];
   for (let i = 0; i < 28; i++) {
@@ -239,9 +241,9 @@ function celebrate(text) {
 $("#yay").onclick = () => $("#yay").classList.add("hidden");
 
 let toastTimer = null;
-function tryAgain(text) {
+function tryAgain(word) {
   const t = $("#toast");
-  t.textContent = `“${text}” — let's try again! 加油 💪`;
+  t.textContent = isInkOnly(word) ? "Let's try that one again! 加油 💪" : `“${word?.text || ""}” — let's try again! 加油 💪`;
   t.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), 3500);
@@ -338,68 +340,28 @@ $("#typeInput").oninput = (e) => {
 };
 
 // ── Handwriting board ────────────────────────────────────────────────
-// The student draws one character, taps the right suggestion, and it's added
-// to their answer together with their strokes (so the teacher sees the real handwriting).
+// The student writes on the board and sends the drawing exactly as it is.
+// Nothing is recognised or corrected: the teacher sees the real strokes.
+const INK_TEXT = "✍";   // stands in for the text of a handwritten answer
 let board = null;
-let written = [];            // [{ t: "好", s: [[x, y, …], …] }]
-let recogSeq = 0;
-let recogTimer = null;
 
 function ensureBoard() {
   if (board) { board.resize(); return; }
   board = createBoard($("#wCanvas"), () => {
-    clearTimeout(recogTimer);
-    if (!board.strokes.length) { renderCands(null); return; }
-    recogTimer = setTimeout(runRecognition, 350);
+    // let the teacher see that this student is writing
+    if (board.strokes.length) sendInterim(INK_TEXT);
+    else { clearTimeout(timer); timer = null; remove(rr(`answers/${uid}`)).catch(() => {}); }
   });
-  renderCands(null);
 }
 
-async function runRecognition() {
-  const seq = ++recogSeq;
-  const strokes = board.strokes.slice();
-  try {
-    const list = await recognize(strokes, board.width, board.height, meta?.lang || "zh-CN");
-    if (seq === recogSeq) renderCands(list);
-  } catch (e) {
-    console.warn(e);
-    if (seq === recogSeq) renderCands([], true);
-  }
-}
-
-function renderCands(list, failed = false) {
-  const el = $("#wCands");
-  if (list === null) { el.innerHTML = `<span class="muted">Draw one character in the box 👇</span>`; return; }
-  const keep = `<button class="keep" data-keep="1" title="Send your drawing as it is">✍️ Keep my drawing</button>`;
-  el.innerHTML = (failed ? `<span class="muted">Can't recognise right now.</span>` : "")
-    + list.map((c) => `<button data-c="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("") + keep;
-}
-
-$("#wCands").onclick = (e) => {
-  const b = e.target.closest("button");
-  if (!b || !board?.strokes.length) return;
-  const t = b.dataset.keep ? "✍" : b.dataset.c;
-  written.push({ t, s: encodeStrokes(board.strokes, board.width, board.height) });
-  board.clear();
-  renderWritten();
-};
 $("#wUndo").onclick = () => board?.undo();
 $("#wClear").onclick = () => board?.clear();
-$("#wBack").onclick = () => { written.pop(); renderWritten(); };
 $("#wSend").onclick = () => {
-  if (board?.strokes.length) { setFeedback("Tap a character above the box first 👆", "no"); return; }
-  if (!written.length) { setFeedback("Write a character first ✍️", "no"); return; }
-  const ink = JSON.stringify(written);
-  if (ink.length > 30000) { setFeedback("That's too long — send fewer characters at a time.", "no"); return; }
-  if (submitWord(written.map((w) => w.t).join(""), "write", ink)) { written = []; renderWritten(true); }
+  if (!board?.strokes.length) { setFeedback("Write on the board first ✍️", "no"); return; }
+  const ink = JSON.stringify([{ t: INK_TEXT, s: encodeStrokes(board.strokes, board.width, board.height) }]);
+  if (ink.length > 30000) { setFeedback("That drawing is too big — clear it and write a little less.", "no"); return; }
+  if (submitWord(INK_TEXT, "write", ink)) board.clear();
 };
-
-function renderWritten(sent = false) {
-  const text = written.map((w) => w.t).join("");
-  $("#wText").innerHTML = text ? escapeHtml(text) : `<span class="muted">Write a character below ✍️</span>`;
-  if (text) sendInterim(text);
-  else if (!sent) remove(rr(`answers/${uid}`)).catch(() => {});
-}
 
 // Auto-continue: ?pin=123456 in the link (from the QR code) → go straight to the name step.
 if (/^\d{6}$/.test(pin)) choosePin(pin);

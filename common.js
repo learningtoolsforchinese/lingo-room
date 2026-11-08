@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { pinyin } from "https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/+esm";
-import { firebaseConfig } from "./firebase-config.js?v=0.8.0";
+import { firebaseConfig } from "./firebase-config.js?v=0.9.0";
 
 const params = new URLSearchParams(location.search);
 
@@ -184,6 +184,9 @@ export function inkSvg(groups, px, cls = "ink") {
       <path class="ink-grid" d="M128 0V256M0 128H256M0 0L256 256M256 0L0 256"/><g class="ink-strokes">${lines}</g></svg>`;
   }).join("");
 }
+
+/** A handwritten answer has only a drawing — no text to show. */
+export const isInkOnly = (w) => !!w?.ink?.length && w.text === "✍";
 
 /** Ways a student can answer. Older rooms without this setting = speaking only. */
 export const INPUTS = { speak: "🎤 Speak", type: "⌨️ Type", write: "✍️ Write" };

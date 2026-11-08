@@ -7,12 +7,12 @@ The first version is built for **Chinese speaking practice** (speech recognition
 - **Teacher page:** `host.html`. The teacher signs in with their Google (Gmail) account, then sees the PIN, a QR code, a live card for each student listing everything they said, and a leaderboard.
 - **Student page:** `index.html`. Enter the PIN and a name, then answer by speaking 🎤, typing ⌨️ or handwriting ✍️, whichever the teacher allows.
 
-Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase Realtime Database** (free Spark plan) syncs the data live. Speech recognition is the browser's built-in Web Speech API, and handwriting suggestions come from Google's free handwriting-input service (the one Google's keyboards use, no key needed). It's an unofficial service, so if it ever stops working, students can still send their drawings.
+Everything runs in the browser: **GitHub Pages** hosts the pages and **Firebase Realtime Database** (free Spark plan) syncs the data live. Speech recognition is the browser's built-in Web Speech API.
 
 ## How it works
 
 - **The teacher chooses how students answer** with the **Answer by** switch: 🎤 **Speak**, ⌨️ **Type** or ✍️ **Write**, one at a time. The selected one is highlighted, and every student's screen switches to it straight away.
-- **✍️ Write is a handwriting board.** The student draws one character in the 田字格 box, taps the right character from the suggestions, then writes the next one, and taps **Send**. The teacher sees the student's **actual handwriting** next to the recognised characters, on the card and big in Spotlight, so stroke mistakes are visible. If no suggestion fits, **✍️ Keep my drawing** sends the drawing as it is.
+- **✍️ Write is a handwriting board.** The student writes in the 田字格 box and taps **Send**. Nothing is recognised or corrected: the teacher sees the drawing exactly as the student wrote it, on the card, big in Spotlight, in the word cloud and in History, and marks it ✓ or ✗.
 - **The app never corrects students.** It shows exactly what each student said, so the teacher can do the correcting.
 - **Each student's card lists every word they've said,** newest at the top. While a student is still speaking, their words appear in grey with ●●●.
 - **The teacher marks each word ✓ (correct) or ✗ (incorrect).** Each ✓ is worth **+1000 points**. Clicking the same mark again removes it, and the points too.
@@ -106,7 +106,7 @@ Then open `http://localhost:8080/host.html?emu=1` (the emulator shows a test Goo
 Before pushing, stamp the new version on the file links so browsers load the fresh files:
 
 ```bash
-sh scripts/set-version.sh 0.8.0
+sh scripts/set-version.sh 0.9.0
 ```
 
 ## Files
@@ -116,7 +116,7 @@ sh scripts/set-version.sh 0.8.0
 | `host.html`, `host.js` | Teacher page |
 | `history.html`, `history.js` | Class history page |
 | `common.js` | Firebase setup, pinyin, drawing handwriting |
-| `board.js` | Handwriting board and recognition |
+| `board.js` | Handwriting board |
 | `style.css` | Styles |
 | `firebase-config.js` | **Your Firebase config goes here** |
 | `database.rules.json` | Security rules to paste into Firebase |
