@@ -22,6 +22,20 @@
             "$other": { ".validate": false }
           }
         },
+        "listening": {
+          ".indexOn": ["updatedAt"],
+          "$id": {
+            ".validate": "newData.hasChildren(['title', 'script', 'updatedAt'])",
+            "title": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "script": { ".validate": "newData.isString() && newData.val().length <= 20000" },
+            "lang": { ".validate": "newData.val() === 'zh' || newData.val() === 'en' || newData.val() === 'fr'" },
+            "speed": { ".validate": "newData.isNumber() && newData.val() >= 0.5 && newData.val() <= 2" },
+            "lineGap": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+            "repeatGap": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
         "classDetails": {
           "$classId": { ".validate": true }
         },

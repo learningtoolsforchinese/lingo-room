@@ -3,13 +3,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, parseInk, inkSvg, isInkOnly, $,
-} from "./common.js?v=0.9.0";
+} from "./common.js?v=0.10.0";
 
 const { auth, db } = await bootTeacher();
 const user = await requireTeacher(auth);
 const uid = user.uid;
 showTeacherChip(auth, user, $("#me"));
 $("#backToClass").href = withEmu("host.html");
+$("#toListening").href = withEmu("listening.html");
 
 const fmtDate = (ms) => ms ? new Date(ms).toLocaleString(undefined, {
   weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",

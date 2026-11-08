@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f4ef">
+  <title>Lingo Room · Listening maker</title>
+  <link rel="stylesheet" href="style.css?v=0.10.0">
+</head>
+<body>
+  <header class="host-top">
+    <div class="brand">Lingo <span>Room</span></div>
+    <span class="count-pill">🎧 Listening maker</span>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <a class="btn ghost" id="toClass" href="host.html">← Class</a>
+      <a class="btn ghost" id="toHistory" href="history.html">📚 History</a>
+      <div class="me hidden" id="me"><img alt="" referrerpolicy="no-referrer"><span></span><button class="btn ghost">Sign out</button></div>
+    </div>
+  </header>
+
+  <main class="ls-main">
+    <section class="ls-editor">
+      <h1 class="hist-h1">Make a listening audio</h1>
+      <p class="muted" style="margin:0 0 12px">Type your script, add pauses and sounds, then download it as an MP3 for your listening test.</p>
+
+      <div class="ls-row">
+        <input id="title" class="ls-title" maxlength="100" placeholder="Title, e.g. HSK 1 listening – weather">
+        <select id="lang" title="Language of the script"></select>
+      </div>
+
+      <div class="ls-tools" id="tools">
+        <span class="ls-group" title="Who reads the line (A is the default voice)">
+          <button type="button" class="btn" data-act="voice" data-v="A">A: <small>woman</small></button>
+          <button type="button" class="btn" data-act="voice" data-v="B">B: <small id="bLabel">man</small></button>
+        </span>
+        <span class="ls-group">
+          <button type="button" class="btn" data-act="twice" title="Read the selected lines twice (or the current line)">🔁 Read twice</button>
+          <button type="button" class="btn" data-act="pause">⏸ Pause</button>
+          <select id="pauseSel" title="Pause length">
+            <option value="0.5">0.5 s</option><option value="1" selected>1 s</option><option value="2">2 s</option>
+            <option value="3">3 s</option><option value="5">5 s</option><option value="10">10 s</option>
+          </select>
+        </span>
+        <span class="ls-group">
+          <button type="button" class="btn" data-act="sfx" data-s="d">🔔 Ding</button>
+          <button type="button" class="btn" data-act="sfx" data-s="dd">Ding-dong</button>
+          <button type="button" class="btn" data-act="sfx" data-s="b">Beep</button>
+          <button type="button" class="btn" data-act="sfx" data-s="c">Chime</button>
+        </span>
+        <span class="ls-group">
+          <button type="button" class="btn ghost" data-act="example">Example</button>
+          <button type="button" class="btn ghost" data-act="new">New</button>
+        </span>
+      </div>
+
+      <textarea id="script" class="ls-script hanzi" spellcheck="false" rows="12"
+        placeholder="Type or paste your script here, one line at a time.&#10;&#10;Use the buttons above to add pauses, sounds, or to read lines twice."></textarea>
+      <div class="ls-summary muted" id="summary"></div>
+      <div class="ls-warn hidden" id="warnings"></div>
+
+      <details class="ls-outline" id="outlineBox">
+        <summary>What will be played, in order</summary>
+        <div id="outline" class="hanzi"></div>
+      </details>
+
+      <div class="ls-settings">
+        <label>Speed
+          <select id="speed">
+            <option value="0.7">Very slow (0.7×)</option><option value="0.85">Slow (0.85×)</option>
+            <option value="1" selected>Normal</option>
+            <option value="1.15">Fast (1.15×)</option><option value="1.3">Faster (1.3×)</option>
+          </select>
+        </label>
+        <label>Pause after each line <input id="lineGap" type="number" min="0" max="10" step="0.1" value="0.7"> s</label>
+        <label>Pause between repeats <input id="repeatGap" type="number" min="0" max="20" step="0.5" value="2"> s</label>
+      </div>
+
+      <div class="ls-actions">
+        <button type="button" class="btn primary" id="make">🎧 Make audio</button>
+        <button type="button" class="btn" id="save">💾 Save script</button>
+        <span class="muted" id="saveNote"></span>
+      </div>
+      <div class="ls-progress hidden" id="progress"><div class="ls-bar"><div id="bar"></div></div><div id="progressText" class="muted"></div></div>
+      <div class="ls-error hidden" id="error"></div>
+      <p class="note" style="text-align:left;margin:6px 0 0">The first time, the voice downloads once (about 63 MB) and is then kept in your browser. Everything is made on your computer.</p>
+
+      <div class="ls-result hidden" id="result">
+        <h3 style="margin:0 0 8px">Your audio</h3>
+        <audio id="player" controls preload="auto"></audio>
+        <div class="ls-resinfo">
+          <span class="muted" id="resInfo"></span>
+          <a class="btn primary" id="download" href="#" download="listening.mp3">⬇ Download MP3</a>
+        </div>
+      </div>
+    </section>
+
+    <aside class="ls-side">
+      <div class="board-panel">
+        <h3>💾 My scripts</h3>
+        <ul class="ls-saved" id="saved"><li class="muted">Loading…</li></ul>
+      </div>
+      <div class="board-panel">
+        <h3>Tag guide</h3>
+        <table class="ls-guide">
+          <tr><td><code>*2*</code> … <code>*2*</code></td><td>read what's between twice (<code>*3*</code> for three times)</td></tr>
+          <tr><td><code>*p1*</code></td><td>pause 1 second (<code>*p0.5*</code>, <code>*p3*</code> …)</td></tr>
+          <tr><td><code>*d*</code></td><td>ding</td></tr>
+          <tr><td><code>*dd*</code></td><td>ding-dong</td></tr>
+          <tr><td><code>*b*</code></td><td>beep</td></tr>
+          <tr><td><code>*c*</code></td><td>chime</td></tr>
+          <tr><td><code>A:</code> <code>B:</code></td><td>start a line with it to choose the voice. <code>女：</code> and <code>男：</code> work too. No label = voice A.</td></tr>
+        </table>
+        <p class="muted" style="margin:8px 0 0;font-size:14px">Tags can sit on their own line or at the end of a line, e.g. <code>问题：…？ *p1* *d*</code></p>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="listening.js?v=0.10.0"></script>
+</body>
+</html>

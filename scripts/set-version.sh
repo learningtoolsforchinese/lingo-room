@@ -8,8 +8,8 @@ V="$1"
 for f in *.html *.js; do
   perl -pi -e '
     s#(href="style\.css)(\?v=[^"]*)?"#$1?v='"$V"'"#g;
-    s#(src="(?:host|student|history)\.js)(\?v=[^"]*)?"#$1?v='"$V"'"#g;
-    s#(from "\./(?:common|board|firebase-config)\.js)(\?v=[^"]*)?"#$1?v='"$V"'"#g;
+    s#(src="(?:host|student|history|listening)\.js)(\?v=[^"]*)?"#$1?v='"$V"'"#g;
+    s#(from "\./(?:common|board|tts|firebase-config)\.js)(\?v=[^"]*)?"#$1?v='"$V"'"#g;
   ' "$f"
 done
 echo "Version set to $V"

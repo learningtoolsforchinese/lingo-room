@@ -5,7 +5,7 @@ import {
 import {
   bootTeacher, requireTeacher, showTeacherChip, withEmu, escapeHtml, toPinyin, LANGS, $,
   parseInk, inkSvg, inputsOf, isInkOnly,
-} from "./common.js?v=0.9.0";
+} from "./common.js?v=0.10.0";
 
 const POINTS = 1000; // points for each word the teacher marks correct
 
@@ -149,6 +149,7 @@ $("#fullscreen").onclick = () => {
   else document.documentElement.requestFullscreen?.();
 };
 $("#historyLink").href = withEmu("history.html");
+$("#listeningLink").href = withEmu("listening.html");
 
 // ── End class: save to history, then close the room ──────────────────
 function defaultClassName() {
